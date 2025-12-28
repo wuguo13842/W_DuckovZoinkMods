@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DuckovPath>D:\SteamLibrary\steamapps\common\Escape from Duckov\Duckov_Data</DuckovPath>
+    <ManagedPath>$(DuckovPath)\Managed</ManagedPath>
+    <LangVersion>10.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(DuckovPath)\Managed\TeamSoda.*" />
+    <Reference Include="$(DuckovPath)\Managed\Cinemachine.dll" />
+    <Reference Include="$(DuckovPath)\Managed\ItemStatsSystem.dll" />
+    <Reference Include="0Harmony">
+      <HintPath>libs\0Harmony.dll</HintPath>
+    </Reference>
+    <Reference Include="$(DuckovPath)\Managed\Unity*" />
+    <ResourceFiles Include="Resources\**\*" />
+    <MiniMapFiles Include="MiniMap\**\*" />
+
+    <!-- 包含所有 DLL -->
+    <AllDlls Include="$(ManagedPath)\*.dll" />
+
+    <!-- 定义要排除的系统 DLL -->
+    <SystemDlls Include="$(ManagedPath)\mscorlib.dll;&#xA;                      $(ManagedPath)\System.dll;&#xA;                      $(ManagedPath)\System.*.dll;&#xA;                      $(ManagedPath)\Microsoft.*.dll;&#xA;                      $(ManagedPath)\netstandard.dll;&#xA;                      $(ManagedPath)\WindowsBase.dll" />
+    <None Remove="MiniMap\preview.png" />
+    <Content Include="MiniMap\preview.png" />
+
+    <!-- 引用非系统 DLL -->
+    <Reference Include="@(AllDlls)" Exclude="@(SystemDlls)" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="EmbeddedResource\" />
+  </ItemGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="bin\Release\netstandard2.1\MiniMap.dll" DestinationFiles="$(DuckovPath)\Mods\MiniMap\MiniMap.dll" />
+    <Copy SourceFiles="bin\Release\netstandard2.1\Newtonsoft.Json.dll" DestinationFiles="$(DuckovPath)\Mods\MiniMap\Newtonsoft.Json.dll" />
+    <Copy SourceFiles="libs\0Harmony.dll" DestinationFiles="$(DuckovPath)\Mods\MiniMap\0Harmony.dll" />
+    <Copy SourceFiles="@(MiniMapFiles)" DestinationFolder="$(DuckovPath)\Mods\MiniMap\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(ResourceFiles)" DestinationFolder="$(DuckovPath)\Mods\MiniMap\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

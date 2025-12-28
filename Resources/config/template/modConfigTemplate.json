@@ -1,0 +1,120 @@
+{
+    "groups": {
+        "MiniMap": {
+            "descCN": "小地图",
+            "descEN": "Mini Map",
+            "configs": {
+                "enableMiniMap": {
+                    "type": "toggle",
+                    "descCN": "启用小地图",
+                    "descEN": "Enable Mini Map",
+                    "default": true
+                },
+                "alphaOnMouseEnter": {
+                    "type": "slider",
+                    "descCN": "鼠标进入时不透明度",
+                    "descEN": "Alpha When Mouse Enter",
+                    "default": 0.1,
+                    "min": 0,
+                    "max": 1.0,
+                    "decimalPlaces": 2
+                },
+                "miniMapWindowScale": {
+                    "type": "slider",
+                    "descCN": "小地图窗口缩放",
+                    "descEN": "Mini Map Window Scale",
+                    "default": 1.6,
+                    "min": 0.1,
+                    "max": 3.0,
+                    "decimalPlaces": 2
+                },
+                "miniMapPositionX": {
+                    "type": "slider",
+                    "descCN": "小地图位置X",
+                    "descEN": "Mini Map Position X",
+                    "default": 0.1,
+                    "min": 0,
+                    "max": 1.0,
+                    "decimalPlaces": 3
+                },
+                "miniMapPositionY": {
+                    "type": "slider",
+                    "descCN": "小地图位置Y",
+                    "descEN": "Mini Map Position Y",
+                    "default": 0.72,
+                    "min": 0,
+                    "max": 1.0,
+                    "decimalPlaces": 3
+                },
+                "miniMapZoomStep": {
+                    "type": "slider",
+                    "descCN": "小地图缩放步长",
+                    "descEN": "Mini Map Scale Step",
+                    "default": 0.5,
+                    "min": 0.1,
+                    "max": 2.0,
+                    "decimalPlaces": 2
+                },
+                "miniMapRotation": {
+                    "type": "toggle",
+                    "descCN": "小地图旋转",
+                    "descEN": "Mini Map Rotation",
+                    "default": false
+                },
+                "mapRotation": {
+                    "type": "toggle",
+                    "descCN": "大地图旋转",
+                    "descEN": "Map Rotation",
+                    "default": false
+                },
+                "facingBase": {
+                    "type": "dropdownList",
+                    "descCN": "面向指示基准",
+                    "descEN": "Facing Direction Base On",
+                    "optionsCN": [ "指针方向", "面朝方向" ],
+                    "optionsEN": [ "Mouse", "Face" ],
+                    "default": 0
+                }
+            }
+        },
+        "HotKeys": {
+            "descCN": "快捷键",
+            "descEN": "Hot Keys",
+            "configs": {
+                "miniMapToggleKey": {
+                    "type": "keyBinding",
+                    "descCN": "小地图开关快捷键",
+                    "descEN": "Toggle Mini Map Hot Key",
+                    "default": "Alpha9"
+                },
+                "MiniMapZoomInKey": {
+                    "type": "keyBinding",
+                    "descCN": "小地图放大快捷键",
+                    "descEN": "Mini Map Zoom In Hot Key",
+                    "default": "Equals"
+                },
+                "MiniMapZoomOutKey": {
+                    "type": "keyBinding",
+                    "descCN": "小地图缩小快捷键",
+                    "descEN": "Mini Map Zoom Out Hot Key",
+                    "default": "Minus"
+                }
+            }
+        }
+    },
+    "extraConfigs": {
+        "resetAllButton": {
+            "type": "button",
+            "descCN": "重置所有设置",
+            "descEN": "Reset All",
+            "textCN": "重置",
+            "textEN": "Reset"
+        }
+    },
+    "noUIConfigs": {
+        "displayZoomScale": {
+            "type": "slider",
+            "default": 5.0
+        }
+    }
+}
