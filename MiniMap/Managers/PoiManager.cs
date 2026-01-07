@@ -24,8 +24,8 @@ namespace MiniMap.Managers
                 ShowInMap = ModSettingManager.GetValue("showPoiInMap", true),
                 ShowInMiniMap = ModSettingManager.GetValue("showPoiInMiniMap", true),
             };
-            PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.MainCharacter, out _, out IPointOfInterest? mainDirectionPoi, poiShows);
-            PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.PetCharacter, out IPointOfInterest? petPoi, out IPointOfInterest? petDirectionPoi, poiShows);
+            PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.MainCharacter, out _, out DirectionPointOfInterest? mainDirectionPoi, poiShows);
+            PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.PetCharacter, out CharacterPointOfInterest? petPoi, out DirectionPointOfInterest? petDirectionPoi, poiShows);
         }
 
         public static void SetPoiShow(CharacterPointOfInterestBase poi)

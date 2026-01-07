@@ -3,6 +3,7 @@ using MiniMap.Extentions;
 using MiniMap.Managers;
 using MiniMap.Poi;
 using Newtonsoft.Json.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 using ZoinkModdingLibrary.Utils;
 
@@ -10,9 +11,9 @@ namespace MiniMap.Utils
 {
     public static class PoiCommon
     {
-        private static Sprite? GetIcon(JObject? config, string presetName, out float scale, out CharacterType characterType)
+        private static Sprite? GetIcon(JObject? config, string? presetName, out float scale, out CharacterType characterType)
         {
-            if (config == null)
+            if (config == null || string.IsNullOrEmpty(presetName))
             {
                 scale = 0.5f;
                 characterType = CharacterType.Enemy;
@@ -35,7 +36,7 @@ namespace MiniMap.Utils
                         iconName = defaultIconName;
                     }
                     scale = jObject.Value<float?>("scale") ?? defaultScale;
-                    if(presetName == "PetPreset_NormalPet")
+                    if (presetName == "PetPreset_NormalPet")
                     {
                         characterType = CharacterType.Pet;
                     }
@@ -57,7 +58,7 @@ namespace MiniMap.Utils
             return ModFileOperations.LoadSprite(defaultIconName);
         }
 
-        public static void CreatePoiIfNeeded(CharacterMainControl? character, out IPointOfInterest? characterPoi, out IPointOfInterest? directionPoi, PoiShows? poiShows = null)
+        public static void CreatePoiIfNeeded(CharacterMainControl? character, out CharacterPointOfInterest? characterPoi, out DirectionPointOfInterest? directionPoi, PoiShows? poiShows = null)
         {
             if (!LevelManager.LevelInited || character == null)
             {
@@ -65,58 +66,69 @@ namespace MiniMap.Utils
                 directionPoi = null;
                 return;
             }
-
-            GameObject poiObject = character.gameObject;
+            if (character.transform.parent?.name == "Level_Factory_Main")
+            {
+                if (character.gameObject != null)
+                {
+                    GameObject.Destroy(character.gameObject);
+                }
+                characterPoi = null;
+                directionPoi = null;
+                return;
+            }
+            SimplePointOfInterest? originPoi = character.GetComponentInChildren<SimplePointOfInterest>() ?? character.GetComponent<SimplePointOfInterest>();
+            GameObject poiObject = originPoi != null ? originPoi.gameObject : character.gameObject;
             if (poiObject == null)
             {
                 characterPoi = null;
                 directionPoi = null;
                 return;
             }
-            if (character.transform.parent?.name == "Level_Factory_Main")
+            CharacterRandomPreset? preset = character.characterPreset;
+            if (preset == null && !character.IsMainCharacter)
             {
-                if (poiObject != null)
-                {
-                    GameObject.Destroy(poiObject);
-                }
                 characterPoi = null;
                 directionPoi = null;
                 return;
             }
-            float scaleFactor = 1;
-            directionPoi = poiObject.GetComponent<DirectionPointOfInterest>();
-            characterPoi = poiObject.GetComponent<SimplePointOfInterest>();
-            characterPoi ??= poiObject.GetComponent<CharacterPointOfInterest>();
+            characterPoi = poiObject.GetOrAddComponent<CharacterPointOfInterest>();
+            directionPoi = poiObject.GetOrAddComponent<DirectionPointOfInterest>();
             CharacterType characterType;
-            if (characterPoi == null)
+            float scaleFactor = 1;
+            if (!characterPoi.Initialized)
             {
-                CharacterRandomPreset? preset = character.characterPreset;
-                if (preset == null)
-                {
-                    return;
-                }
-                characterPoi = poiObject.AddComponent<CharacterPointOfInterest>();
-                CharacterPointOfInterest pointOfInterest = (CharacterPointOfInterest)characterPoi;
-                ModBehaviour.Logger.Log($"Setting Up characterPoi for {(character.IsMainCharacter ? "Main Character" : preset.DisplayName)}");
                 JObject? iconConfig = ModFileOperations.LoadJson("iconConfig.json", ModBehaviour.Logger);
-                Sprite? icon = GetIcon(iconConfig, preset.name, out scaleFactor, out characterType);
-                pointOfInterest.Setup(icon, character, poiShows, cachedName: preset.nameKey, followActiveScene: true);
-                pointOfInterest.ScaleFactor = scaleFactor;
-            }
-            if (directionPoi == null)
-            {
-                CharacterRandomPreset? preset = character.characterPreset;
-                if (preset == null && !character.IsMainCharacter)
+                Sprite? icon = GetIcon(iconConfig, preset?.name, out scaleFactor, out characterType);
+                if (character.IsMainCharacter)
                 {
-                    return;
+                    characterType = CharacterType.Main;
+                    scaleFactor = 1f;
                 }
-                directionPoi = poiObject.AddComponent<DirectionPointOfInterest>();
-                DirectionPointOfInterest pointOfInterest = (DirectionPointOfInterest)directionPoi;
-                ModBehaviour.Logger.Log($"Setting Up directionPoi for {(character.IsMainCharacter ? "Main Character" : preset?.DisplayName)}");
+                characterPoi.ScaleFactor = scaleFactor;
+                if (originPoi == null)
+                {
+                    characterPoi.Setup(icon, character, characterType, poiShows, preset?.nameKey, followActiveScene: true);
+                }
+                else
+                {
+                    characterPoi.Setup(originPoi, character, characterType, poiShows, followActiveScene: true);
+                }
+                if (originPoi)
+                {
+                    GameObject.Destroy(originPoi);
+                }
+            }
+            else
+            {
+                characterType = characterPoi.CharacterType;
+            }
+
+            if (!directionPoi.Initialized)
+            {
                 Sprite? icon = ModFileOperations.LoadSprite("CharactorDirection.png");
-                pointOfInterest.BaseEulerAngle = 45f;
-                pointOfInterest.Setup(icon, character, poiShows, cachedName: preset?.DisplayName, followActiveScene: true);
-                pointOfInterest.ScaleFactor = scaleFactor;
+                directionPoi.BaseEulerAngle = 45f;
+                directionPoi.ScaleFactor = scaleFactor;
+                directionPoi.Setup(icon, character, characterType, poiShows, cachedName: preset?.DisplayName, followActiveScene: true);
             }
         }
 
