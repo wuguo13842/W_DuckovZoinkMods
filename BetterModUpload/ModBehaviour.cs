@@ -8,6 +8,7 @@ using System.Linq;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using ZoinkModdingLibrary;
 using ZoinkModdingLibrary.Patcher;
@@ -55,7 +56,17 @@ namespace BetterModUpload
             {
                 patcher.Patch(Harmony, Logger);
             }
-            Initialize();
+            //Initialize();
+            SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if(scene.name == "MainMenu")
+            {
+                inited = false;
+                Initialize();
+            }
         }
 
         private void OnDisable()

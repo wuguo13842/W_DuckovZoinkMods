@@ -18,14 +18,7 @@ namespace MiniMap.Patchers
         {
             try
             {
-                PoiShows poiShows = new PoiShows()
-                {
-                    ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false),
-                    ShowPetPoi = ModSettingManager.GetValue("showPetPoi", true),
-                    ShowInMap = ModSettingManager.GetValue("showPoiInMap", true),
-                    ShowInMiniMap = ModSettingManager.GetValue("showPoiInMiniMap", true),
-                };
-                PoiCommon.CreatePoiIfNeeded(c, out _, out _, poiShows);
+                PoiCommon.CreatePoiIfNeeded(c, out _, out _);
             }
             catch (Exception e)
             {

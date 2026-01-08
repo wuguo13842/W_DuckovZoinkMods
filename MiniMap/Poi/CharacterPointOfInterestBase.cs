@@ -13,15 +13,10 @@ namespace MiniMap.Poi
     public abstract class CharacterPointOfInterestBase : MonoBehaviour, IPointOfInterest
     {
         private bool initialized = false;
-        private bool isMain = false;
-        private bool isPet = false;
-        private bool showPet = true;
 
         private CharacterMainControl? character;
         private CharacterType characterType;
         private string? cachedName;
-        private bool showInMap;
-        private bool showInMiniMap;
         private bool showOnlyActivated;
         private Sprite? icon;
         private Color color = Color.white;
@@ -42,47 +37,16 @@ namespace MiniMap.Poi
         public virtual bool ShowOnlyActivated
         {
             get => showOnlyActivated;
-            set
+            protected set
             {
-                if (showOnlyActivated != value)
+                showOnlyActivated = value;
+                if (value && !(character?.gameObject.activeSelf ?? false))
                 {
-                    showOnlyActivated = value;
-                    if (value && !gameObject.activeSelf)
-                    {
-                        Unregister();
-                    }
-                    else
-                    {
-                        Register();
-                    }
+                    Unregister();
                 }
-            }
-        }
-        public virtual bool ShowInMap
-        {
-            get => showInMap;
-            set
-            {
-                if (showInMap != value)
+                else
                 {
-                    showInMap = value || isMain || (isPet && showPet);
-                }
-            }
-        }
-        public virtual bool ShowInMiniMap
-        {
-            get => showInMiniMap;
-            set
-            {
-                if (value != showInMiniMap)
-                {
-                    ModBehaviour.Instance?.ExecuteWithDebounce(() =>
-                        {
-                            showInMiniMap = value || isMain || (isPet && showPet);
-                        }, () =>
-                        {
-                            CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
-                        });
+                    Register();
                 }
             }
         }
@@ -127,7 +91,7 @@ namespace MiniMap.Poi
             }
         }
 
-        public virtual void Setup(Sprite? icon, CharacterMainControl character, CharacterType characterType, PoiShows? poiShows, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
+        public virtual void Setup(Sprite? icon, CharacterMainControl character, CharacterType characterType, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
         {
             if (initialized) return;
             this.character = character;
@@ -136,14 +100,12 @@ namespace MiniMap.Poi
             this.cachedName = cachedName;
             this.followActiveScene = followActiveScene;
             this.overrideSceneID = overrideSceneID;
-            isMain = characterType == CharacterType.Main;
-            isPet = characterType == CharacterType.Pet;
+            ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
             ModSettingManager.ConfigChanged += OnConfigChanged;
-            SetShows(poiShows);
             initialized = true;
         }
 
-        public virtual void Setup(SimplePointOfInterest poi, CharacterMainControl character, CharacterType characterType, PoiShows? poiShows, bool followActiveScene = false, string? overrideSceneID = null)
+        public virtual void Setup(SimplePointOfInterest poi, CharacterMainControl character, CharacterType characterType, bool followActiveScene = false, string? overrideSceneID = null)
         {
             if (initialized) return;
             this.character = character;
@@ -155,12 +117,11 @@ namespace MiniMap.Poi
             this.overrideSceneID = overrideSceneID;
             this.isArea = poi.IsArea;
             this.areaRadius = poi.AreaRadius;
+            this.color = poi.Color;
             this.shadowColor = poi.ShadowColor;
             this.shadowDistance = poi.ShadowDistance;
-            isMain = characterType == CharacterType.Main;
-            isPet = characterType == CharacterType.Pet;
+            ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
             ModSettingManager.ConfigChanged += OnConfigChanged;
-            SetShows(poiShows);
             initialized = true;
         }
 
@@ -172,34 +133,33 @@ namespace MiniMap.Poi
                 case "showOnlyActivated":
                     ShowOnlyActivated = (bool)value;
                     break;
-                case "showPoiInMap":
-                    ShowInMap = (bool)value;
-                    break;
                 case "showPoiInMiniMap":
-                    ShowInMiniMap = (bool)value;
-                    break;
                 case "showPetPoi":
-                    showPet = (bool)value;
-                    if (isPet)
+                case "showBossPoi":
+                case "showEnemyPoi":
+                case "showNeutralPoi":
+                    ModBehaviour.Instance?.ExecuteWithDebounce(() =>
                     {
-                        ShowInMap = ShowInMiniMap = showPet;
-                    }
+
+                    }, () =>
+                    {
+                        CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
+                    });
                     break;
             }
         }
 
         protected virtual void Update()
         {
-            if (character != null && !isMain && PoiCommon.IsDead(character))
+            if (character != null && characterType != CharacterType.Main && PoiCommon.IsDead(character))
             {
                 Destroy(this.gameObject);
                 return;
             }
-            //if (isMain)
-            //{
-            //    ShowInMap = ShowInMiniMap = true;
-            //}
-
+        }
+        protected void OnDestroy()
+        {
+            ModSettingManager.ConfigChanged -= OnConfigChanged;
         }
 
         public virtual void Register(bool force = false)
@@ -210,59 +170,29 @@ namespace MiniMap.Poi
             }
             if (!PointsOfInterests.Points.Contains(this))
             {
-                ModBehaviour.Instance?.ExecuteWithDebounce(() =>
-                {
-                    PointsOfInterests.Register(this);
-                }, () =>
-                {
-                    //ModBehaviour.Logger.Log($"Handling Points Of Interests");
-                    //CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
-                });
+                PointsOfInterests.Register(this);
             }
         }
 
         public virtual void Unregister()
         {
-            ModBehaviour.Instance?.ExecuteWithDebounce(() =>
-                {
-                    PointsOfInterests.Unregister(this);
-                }, () =>
-                {
-                    //ModBehaviour.Logger.Log($"Handling Points Of Interests");
-                    //CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
-                });
+            PointsOfInterests.Unregister(this);
         }
 
-        public virtual void SetShows(PoiShows? poiShows)
-        {
-            bool showOnlyActivated = poiShows?.ShowOnlyActivated ?? ModSettingManager.GetValue("showOnlyActivated", false);
-            bool showPetPoi = poiShows?.ShowPetPoi ?? ModSettingManager.GetValue("showPetPoi", true);
-            bool showInMap = poiShows?.ShowInMap ?? ModSettingManager.GetValue("showPoiInMap", true);
-            bool showInMiniMap = poiShows?.ShowInMiniMap ?? ModSettingManager.GetValue("showPoiInMiniMap", true);
-            ShowOnlyActivated = showOnlyActivated;
-            showPet = showPetPoi;
-            if (isPet)
-            {
-                ShowInMap = ShowInMiniMap = showPetPoi;
-            }
-            else
-            {
-                ShowInMap = showInMap || isMain;
-                ShowInMiniMap = showInMiniMap || isMain;
-            }
-            if (ShowOnlyActivated && !(Character?.gameObject.activeSelf ?? false))
-            {
-                Unregister();
-            }
-            else
-            {
-                Register();
-            }
-        }
+        
 
-        protected void OnDestroy()
+        public virtual bool WillShow(bool isOriginalMap = true)
         {
-            ModSettingManager.ConfigChanged -= OnConfigChanged;
+            bool willShowInThisMap = isOriginalMap ? ModSettingManager.GetValue("showPoiInMap", true) : ModSettingManager.GetValue("showPoiInMiniMap", true);
+            return characterType switch
+            {
+                CharacterType.Main or CharacterType.NPC => true,
+                CharacterType.Pet => ModSettingManager.GetValue("showPetPoi", true),
+                CharacterType.Boss => ModSettingManager.GetValue("showBossPoi", true) && willShowInThisMap,
+                CharacterType.Enemy => ModSettingManager.GetValue("showEnemyPoi", true) && willShowInThisMap,
+                CharacterType.Neutral => ModSettingManager.GetValue("showNeutralPoi", true) && willShowInThisMap,
+                _ => false,
+            };
         }
     }
 }

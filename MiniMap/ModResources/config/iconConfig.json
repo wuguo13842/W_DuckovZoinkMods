@@ -6,7 +6,8 @@
         "EnemyPreset_QuestGiver_Fo": "",
         "EnemyPreset_QuestGiver_XiaoMing": "",
         "SpawnPreset_Animal_Jinitaimei": "",
-        "EnemyPreset_Merchant_Jeff": ""
+        "EnemyPreset_Merchant_Jeff": "",
+        "MatePreset_PMC": ""
     },
     "enemy": {
         "defaultIcon": "MiniMap_EnemyIcon.png",
@@ -21,7 +22,7 @@
         "EnemyPreset_Merchant_Myst0": "",
         "EnemyPreset_Merchant_Test": ""
     },
-    "boss:": {
+    "boss": {
         "defaultIcon": "MiniMap_BossIcon.png",
         "scale": 0.9,
         "EnemyPreset_BossMelee_SchoolBully": "",

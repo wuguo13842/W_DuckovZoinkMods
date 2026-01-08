@@ -99,7 +99,6 @@ namespace ZoinkModdingLibrary.Patcher
                 foreach (KeyValuePair<string, PatchEntry> item in queue)
                 {
                     item.Value.Patch(harmony);
-                    logger.Log($"{item.Key} Patched");
                 }
                 isPatched = true;
                 return true;

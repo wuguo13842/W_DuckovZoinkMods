@@ -58,7 +58,7 @@ namespace MiniMap.Utils
             return ModFileOperations.LoadSprite(defaultIconName);
         }
 
-        public static void CreatePoiIfNeeded(CharacterMainControl? character, out CharacterPointOfInterest? characterPoi, out DirectionPointOfInterest? directionPoi, PoiShows? poiShows = null)
+        public static void CreatePoiIfNeeded(CharacterMainControl? character, out CharacterPointOfInterest? characterPoi, out DirectionPointOfInterest? directionPoi)
         {
             if (!LevelManager.LevelInited || character == null)
             {
@@ -107,11 +107,11 @@ namespace MiniMap.Utils
                 characterPoi.ScaleFactor = scaleFactor;
                 if (originPoi == null)
                 {
-                    characterPoi.Setup(icon, character, characterType, poiShows, preset?.nameKey, followActiveScene: true);
+                    characterPoi.Setup(icon, character, characterType, preset?.nameKey, followActiveScene: true);
                 }
                 else
                 {
-                    characterPoi.Setup(originPoi, character, characterType, poiShows, followActiveScene: true);
+                    characterPoi.Setup(originPoi, character, characterType, followActiveScene: true);
                 }
                 if (originPoi)
                 {
@@ -128,7 +128,7 @@ namespace MiniMap.Utils
                 Sprite? icon = ModFileOperations.LoadSprite("CharactorDirection.png");
                 directionPoi.BaseEulerAngle = 45f;
                 directionPoi.ScaleFactor = scaleFactor;
-                directionPoi.Setup(icon, character, characterType, poiShows, cachedName: preset?.DisplayName, followActiveScene: true);
+                directionPoi.Setup(icon, character, characterType, cachedName: preset?.DisplayName, followActiveScene: true);
             }
         }
 

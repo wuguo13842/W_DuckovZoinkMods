@@ -1,5 +1,7 @@
+using Duckov.MiniMaps;
 using Duckov.MiniMaps.UI;
 using MiniMap.MonoBehaviours;
+using MiniMap.Poi;
 using MiniMap.Utils;
 using System.Collections;
 using System.Reflection;
@@ -7,6 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using ZoinkModdingLibrary.GameUI;
+using ZoinkModdingLibrary.Patcher;
 using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Managers
@@ -64,6 +67,7 @@ namespace MiniMap.Managers
             ModSettingManager.ConfigLoaded += OnConfigLoaded;
             ModSettingManager.ConfigChanged += OnConfigChanged;
             ModSettingManager.ButtonClicked += OnButtonClicked;
+            LevelManager.OnAfterLevelInitialized += OnAfterLevelInitialized;
             SceneManager.sceneLoaded += OnSceneLoaded;
 
             IsInitialized = true;
@@ -73,10 +77,11 @@ namespace MiniMap.Managers
         {
             ModBehaviour.Logger.Log($"destroy minimap container");
             GameObject.Destroy(miniMapContainer);
-            SceneManager.sceneLoaded -= OnSceneLoaded;
             ModSettingManager.ConfigLoaded -= OnConfigLoaded;
             ModSettingManager.ConfigChanged -= OnConfigChanged;
             ModSettingManager.ButtonClicked -= OnButtonClicked;
+            LevelManager.OnAfterLevelInitialized -= OnAfterLevelInitialized;
+            //SceneManager.sceneLoaded -= OnSceneLoaded;
 
             IsInitialized = false;
         }
@@ -329,11 +334,24 @@ namespace MiniMap.Managers
             }
         }
 
-        public static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        public static void OnAfterLevelInitialized()
+        {
+            try
+            {
+                initMapCor = ModBehaviour.Instance?.StartCoroutine(ApplyMiniMapCoroutine());
+            }
+            catch (Exception e)
+            {
+                ModBehaviour.Logger.LogError($"Error on scene loaded: {e.Message}");
+            }
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             try
             {
                 ModBehaviour.Logger.Log($"加载场景 {scene.name} {mode}");
+                ModBehaviour.Logger.Log($"Level Initialized");
                 if (LevelManager.Instance == null || !isEnabled)
                 {
                     customCanvas?.SetActive(false);
@@ -350,7 +368,6 @@ namespace MiniMap.Managers
                     ModBehaviour.Instance.StopCoroutine(initMapCor);
                 ClearMap();
                 customCanvas?.SetActive(false);
-                initMapCor = ModBehaviour.Instance.StartCoroutine(ApplyMiniMapCoroutine());
             }
             catch (Exception e)
             {
@@ -475,6 +492,9 @@ namespace MiniMap.Managers
                     if (ApplyDuplicatedMinimap())
                     {
                         ModBehaviour.Logger.Log($"MiniMap Applied!");
+                        PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.MainCharacter, out _, out DirectionPointOfInterest? mainDirectionPoi);
+                        PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.PetCharacter, out CharacterPointOfInterest? petPoi, out DirectionPointOfInterest? petDirectionPoi);
+                        AssemblyOption.InvokeMethod(MapMarkerManager.Instance, "Load");
                     }
                 }
                 else
@@ -659,6 +679,8 @@ namespace MiniMap.Managers
                 ModBehaviour.Logger.Log($"duplicated minimap object: {duplicatedMinimapObject}");
 
                 duplicatedMinimapDisplay = duplicatedMinimapObject?.GetComponent(originalDisplay.GetType()) as MiniMapDisplay;
+                AssemblyOption.SetField(duplicatedMinimapDisplay, "autoSetupOnEnable", true);
+                //CallDisplayMethod("UnregisterEvents");
                 //CallDisplayMethod("RegisterEvents");
                 if (duplicatedMinimapDisplay == null || duplicatedMinimapObject == null)
                 {

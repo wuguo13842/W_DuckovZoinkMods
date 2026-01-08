@@ -85,7 +85,7 @@
                     "type": "toggle",
                     "descCN": "仅显示附近敌人",
                     "descEN": "Show Nearby Only",
-                    "default": false
+                    "default": true
                 },
                 "showPoiInMap": {
                     "type": "toggle",
@@ -115,6 +115,12 @@
                     "type": "toggle",
                     "descCN": "显示普通敌人图标",
                     "descEN": "Show Enemy",
+                    "default": true
+                },
+                "showNeutralPoi": {
+                    "type": "toggle",
+                    "descCN": "显示中立单位图标",
+                    "descEN": "Show Neutral",
                     "default": true
                 }
             }

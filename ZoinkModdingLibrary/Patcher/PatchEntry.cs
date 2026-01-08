@@ -1,4 +1,7 @@
 ﻿using HarmonyLib;
+using ItemStatsSystem;
+using ParadoxNotion.Services;
+using Sirenix.Serialization;
 using System;
 using System.Reflection;
 using UnityEngine;
@@ -32,10 +35,11 @@ namespace ZoinkModdingLibrary.Patcher
             {
                 harmony?.Unpatch(original, HarmonyPatchType.All, harmony.Id);
                 harmony?.Patch(original, prefix, postfix, transpiler, finalizer);
+                modLogger.Log($"{original.Name} Patched");
             }
             catch (Exception e)
             {
-                modLogger.LogError($"Patch Failed: {e.Message}");
+                modLogger.LogError($"{original.Name} Patch Failed: {e.Message}\n{e.StackTrace}");
             }
         }
 

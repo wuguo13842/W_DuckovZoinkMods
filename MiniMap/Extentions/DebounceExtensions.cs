@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace MiniMap.Extentions
 {
-    public static class TaskExtensions
+    public static class DebounceExtensions
     {
         private static float s_lastTaskTime;
         private static Coroutine? s_activeRefreshCoroutine;

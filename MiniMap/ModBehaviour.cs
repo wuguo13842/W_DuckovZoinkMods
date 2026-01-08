@@ -23,10 +23,10 @@ namespace MiniMap
 
         private List<PatcherBase> patchers = new List<PatcherBase>() {
             CharacterSpawnerRootPatcher.Instance,
-            //CharacterMainControlPatcher.Instance,
             PointOfInterestEntryPatcher.Instance,
             MiniMapCompassPatcher.Instance,
             MiniMapDisplayPatcher.Instance,
+            MapMarkerManagerPatcher.Instance
         };
 
         public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
@@ -122,7 +122,7 @@ namespace MiniMap
                 ModManager.OnModActivated += ModManager_OnModActivated;
                 LevelManager.OnEvacuated += OnEvacuated;
                 //SceneLoader.onFinishedLoadingScene += PoiManager.OnFinishedLoadingScene;
-                LevelManager.OnAfterLevelInitialized += PoiManager.OnLenvelIntialized;
+                //LevelManager.OnAfterLevelInitialized += PoiManager.OnLenvelIntialized;
             }
             catch (Exception e)
             {
@@ -143,7 +143,7 @@ namespace MiniMap
                 ModManager.OnModActivated -= ModManager_OnModActivated;
                 LevelManager.OnEvacuated -= OnEvacuated;
                 //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
-                LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
+                //LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
                 CustomMinimapManager.Destroy();
                 Logger.Log($"disable mod {MOD_NAME}");
             }
