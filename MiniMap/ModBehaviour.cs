@@ -7,6 +7,7 @@ using MiniMap.Managers;
 using MiniMap.Utils;
 using ZoinkModdingLibrary.Patcher;
 using ZoinkModdingLibrary;
+using MiniMap.Compatibility.BetterMapMarker.Patchers;
 
 namespace MiniMap
 {
@@ -26,7 +27,9 @@ namespace MiniMap
             PointOfInterestEntryPatcher.Instance,
             MiniMapCompassPatcher.Instance,
             MiniMapDisplayPatcher.Instance,
-            MapMarkerManagerPatcher.Instance
+            MapMarkerManagerPatcher.Instance,
+
+            ModBehaviourPatcher.Instance, // BetterMapMarker 兼容补丁
         };
 
         public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
@@ -74,14 +77,14 @@ namespace MiniMap
             return true;
         }
 
-        void ApplyHarmonyExtenders()
+        void ApplyHarmonyPatchers()
         {
             try
             {
                 Logger.Log($"Patching Patchers");
                 foreach (var patcher in patchers)
                 {
-                    patcher.Patch(Harmony, Logger);
+                    patcher.Setup(Harmony, Logger).Patch();
                 }
             }
             catch (Exception e)
@@ -89,13 +92,13 @@ namespace MiniMap
                 Logger.LogError($"应用扩展器失败: {e}");
             }
         }
-        void CancelHarmonyExtender()
+        void CancelHarmonyPatchers()
         {
             try
             {
                 foreach (var patcher in patchers)
                 {
-                    patcher.Unpatch(Harmony, Logger);
+                    patcher.Dispose();
                 }
             }
             catch (Exception e)
@@ -118,7 +121,7 @@ namespace MiniMap
             try
             {
                 CustomMinimapManager.Initialize();
-                ApplyHarmonyExtenders();
+                ApplyHarmonyPatchers();
                 ModManager.OnModActivated += ModManager_OnModActivated;
                 LevelManager.OnEvacuated += OnEvacuated;
                 //SceneLoader.onFinishedLoadingScene += PoiManager.OnFinishedLoadingScene;
@@ -139,7 +142,7 @@ namespace MiniMap
         {
             try
             {
-                CancelHarmonyExtender();
+                CancelHarmonyPatchers();
                 ModManager.OnModActivated -= ModManager_OnModActivated;
                 LevelManager.OnEvacuated -= OnEvacuated;
                 //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;

@@ -81,7 +81,7 @@ namespace MiniMap.Managers
             ModSettingManager.ConfigChanged -= OnConfigChanged;
             ModSettingManager.ButtonClicked -= OnButtonClicked;
             LevelManager.OnAfterLevelInitialized -= OnAfterLevelInitialized;
-            //SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
 
             IsInitialized = false;
         }

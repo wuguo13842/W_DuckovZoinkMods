@@ -1,6 +1,7 @@
 ﻿using Duckov.MiniMaps;
 using Duckov.MiniMaps.UI;
 using Duckov.Utilities;
+using MiniMap.Managers;
 using MiniMap.Poi;
 using System.Reflection;
 using Unity.VisualScripting;
@@ -16,6 +17,8 @@ namespace MiniMap.Patchers
     {
         public static new PatcherBase Instance { get; } = new PointOfInterestEntryPatcher();
         private PointOfInterestEntryPatcher() { }
+
+        private static float? lastUpdateTime;
 
         [MethodPatcher("UpdateRotation", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static bool UpdateRotationPrefix(PointOfInterestEntry __instance, MiniMapDisplayEntry ___minimapEntry)
@@ -49,6 +52,16 @@ namespace MiniMap.Patchers
                 GameObject.Destroy(__instance.gameObject);
                 return false;
             }
+            //if (___master == CustomMinimapManager.DuplicatedMinimapDisplay && !(__instance.Target?.gameObject.activeInHierarchy ?? false))
+            //{
+            //    return false;
+            //}
+            //lastUpdateTime = Time.time;
+            if(__instance.Target is IPointOfInterest poi && poi.Color != ___icon.color)
+            {
+                ___icon.color = poi.Color;
+                return true;
+            }
             RectTransform icon = ___icon.rectTransform;
             RectTransform? layout = icon.parent as RectTransform;
             if (layout == null) { return true; }
@@ -56,7 +69,6 @@ namespace MiniMap.Patchers
             {
                 layout.localPosition = Vector3.zero - icon.localPosition;
             }
-
             return true;
         }
 

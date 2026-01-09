@@ -1,4 +1,4 @@
-﻿namespace MiniMap.Managers
+﻿namespace MiniMap.Compatibility
 {
     public static class CompatibilityManager
     {

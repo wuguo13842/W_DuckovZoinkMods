@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using Duckov.Modding;
+using HarmonyLib;
 using ParadoxNotion.Services;
 using Sirenix.Utilities;
 using System;
@@ -18,34 +19,58 @@ namespace ZoinkModdingLibrary.Patcher
         private Type? targetType = null;
         private bool isPatched = false;
         private Dictionary<string, PatchEntry>? queue;
+        private Harmony? harmony;
+        private ModLogger? logger;
 
         public virtual bool IsPatched => isPatched;
 
-        public virtual bool Patch(Harmony? harmony, ModLogger? logger = null)
+        public virtual PatcherBase Setup(Harmony? harmony, ModLogger? logger = null)
         {
-            logger ??= ModLogger.DefultLogger;
+            this.harmony = harmony;
+            this.logger = logger ?? ModLogger.DefultLogger;
+            ModManager.OnModActivated += OnModActivated;
+            ModManager.OnModWillBeDeactivated += OnModWillBeDeactivated;
+            return this;
+        }
+
+        public virtual bool Patch()
+        {
             try
             {
                 if (isPatched)
                 {
-                    logger.LogWarning("Already Patched");
+                    logger?.LogWarning("Already Patched");
                     return true;
                 }
                 TypePatcherAttribute typePatcher = GetType().GetCustomAttribute<TypePatcherAttribute>();
                 if (typePatcher == null)
                 {
-                    logger.LogError($"{GetType().Name} needs \"{typeof(TypePatcherAttribute).Name}\" Attribute");
+                    logger?.LogError($"{GetType().Name} 需要 \"{typeof(TypePatcherAttribute).Name}\" 特性（Attribute）");
+                    isPatched = false;
                     return false;
                 }
                 targetType = typePatcher.TargetType;
                 if (targetType == null)
                 {
-                    logger.LogWarning($"Target Assembly \"{typePatcher.TargetAssemblyName}\" Or Type \"{typePatcher.TargetTypeName}\" Not Found!");
+                    if (typePatcher.IsCertain)
+                    {
+                        logger?.LogError($"{GetType().Name}: 找不到目标类！");
+                    }
+                    else
+                    {
+                        logger?.LogWarning($"找不到程序集 \"{typePatcher.TargetAssemblyName}\" 或者类 \"{typePatcher.TargetTypeName}\"！即将检测后续Mod，如果找到匹配的将再次尝试Patch");
+                    }
+                    isPatched = false;
                     return false;
                 }
-                logger.Log($"Patching {targetType.Name}");
+                logger?.Log($"Patching {targetType.Name}");
                 IEnumerable<MethodInfo> patchMethods = GetType().GetMethods().Where(s => s.HasAttribute<MethodPatcherAttribute>());
-                logger.Log($"Find {patchMethods.Count()} Methods to patch");
+                if (patchMethods.Count() == 0)
+                {
+                    logger?.LogWarning($"没有找到任何需要被Patch的方法！是否没有定义 \"{typeof(MethodPatcherAttribute).Name}\" 特性（Attribute）?");
+                    return false;
+                }
+                logger?.Log($"Find {patchMethods.Count()} Methods to patch");
                 if (queue == null)
                 {
                     queue = new Dictionary<string, PatchEntry>();
@@ -61,10 +86,10 @@ namespace ZoinkModdingLibrary.Patcher
                         MethodInfo? originalMethod = targetType.GetMethod(targetMethod, methodPatcher.BindingFlags);
                         if (originalMethod == null)
                         {
-                            Debug.LogWarning($"Target Method \"{targetType.Name}.{targetMethod}\" Not Found!");
+                            logger?.LogWarning($"Target Method \"{targetType.Name}.{targetMethod}\" Not Found!");
                             continue;
                         }
-                        logger.Log($"Patching {targetType.Name}.{originalMethod.Name}");
+                        logger?.Log($"Patching {targetType.Name}.{originalMethod.Name}");
                         PatchEntry entry;
                         if (queue.ContainsKey(originalMethod.ToString()))
                         {
@@ -90,7 +115,7 @@ namespace ZoinkModdingLibrary.Patcher
                                 entry.finalizer = new HarmonyMethod(method);
                                 break;
                             default:
-                                Debug.LogWarning($"Unknown Patch Type \"{patchType}\".");
+                                logger?.LogWarning($"Unknown Patch Type \"{patchType}\".");
                                 break;
                         }
                     }
@@ -105,23 +130,49 @@ namespace ZoinkModdingLibrary.Patcher
             }
             catch (Exception e)
             {
-                logger.LogError($"Error When Patching: {e.Message}");
+                logger?.LogError($"Error When Patching: {e.Message}");
                 return false;
             }
         }
 
-        public virtual void Unpatch(Harmony? harmony, ModLogger? logger = null)
+        public virtual void Unpatch()
         {
-            logger ??= ModLogger.DefultLogger;
             if (isPatched && queue != null)
             {
                 foreach (KeyValuePair<string, PatchEntry> item in queue)
                 {
                     item.Value.Unpatch(harmony);
-                    logger.Log($"{item.Key} Unpatched");
+                    logger?.Log($"{item.Key} Unpatched");
                 }
                 isPatched = false;
             }
+        }
+
+        protected virtual void OnModWillBeDeactivated(ModInfo mod, ModBehaviour modBehaviour)
+        {
+            TypePatcherAttribute typePatcher = GetType().GetCustomAttribute<TypePatcherAttribute>();
+            if (modBehaviour.GetType().Assembly.FullName.Contains(typePatcher.TargetAssemblyName) && isPatched)
+            {
+                logger?.Log($"检测到匹配的Mod \"{mod.name}\" 即将被卸载，尝试进行Unpatch");
+                Unpatch();
+            }
+        }
+
+        protected virtual void OnModActivated(ModInfo mod, ModBehaviour modBehaviour)
+        {
+            TypePatcherAttribute typePatcher = GetType().GetCustomAttribute<TypePatcherAttribute>();
+            if (modBehaviour.GetType().Assembly.FullName.Contains(typePatcher.TargetAssemblyName) && !isPatched)
+            {
+                logger?.Log($"检测到匹配的Mod \"{mod.name}\" 被激活，尝试进行Patch");
+                Patch();
+            }
+        }
+
+        public virtual void Dispose()
+        {
+            Unpatch();
+            ModManager.OnModWillBeDeactivated -= OnModWillBeDeactivated;
+            ModManager.OnModActivated -= OnModActivated;
         }
     }
 }

@@ -1,7 +1,4 @@
-﻿using Sirenix.OdinInspector;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System;
 using ZoinkModdingLibrary.Patcher;
 
 namespace ZoinkModdingLibrary.Attributes
@@ -15,13 +12,24 @@ namespace ZoinkModdingLibrary.Attributes
 
         public string TargetAssemblyName => targetAssemblyName;
         public string TargetTypeName => targetTypeName;
-        public Type? TargetType => targetType;
+        public bool IsCertain { get; }
+        public Type? TargetType
+        {
+            get
+            {
+                if (targetType == null)
+                {
+                    targetType = AssemblyOption.FindTypeInAssemblies(targetAssemblyName, targetTypeName);
+                }
+                return targetType;
+            }
+        }
 
         public TypePatcherAttribute(string targetAssemblyName, string targetTypeName)
         {
             this.targetAssemblyName = targetAssemblyName;
             this.targetTypeName = targetTypeName;
-            targetType = AssemblyOption.FindTypeInAssemblies(targetAssemblyName, targetTypeName);
+            IsCertain = false;
         }
 
         public TypePatcherAttribute(Type targetType)
@@ -29,6 +37,7 @@ namespace ZoinkModdingLibrary.Attributes
             this.targetType = targetType;
             this.targetAssemblyName = targetType.Assembly.FullName;
             this.targetTypeName = targetType.Name;
+            IsCertain = true;
         }
     }
 }

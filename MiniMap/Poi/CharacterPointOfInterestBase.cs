@@ -157,6 +157,7 @@ namespace MiniMap.Poi
                 return;
             }
         }
+
         protected void OnDestroy()
         {
             ModSettingManager.ConfigChanged -= OnConfigChanged;
@@ -178,8 +179,6 @@ namespace MiniMap.Poi
         {
             PointsOfInterests.Unregister(this);
         }
-
-        
 
         public virtual bool WillShow(bool isOriginalMap = true)
         {

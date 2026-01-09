@@ -54,7 +54,7 @@ namespace BetterModUpload
             Logger.Log("Patching...");
             foreach (var patcher in patchers)
             {
-                patcher.Patch(Harmony, Logger);
+                patcher.Setup(Harmony, Logger).Patch();
             }
             //Initialize();
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -62,7 +62,7 @@ namespace BetterModUpload
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            if(scene.name == "MainMenu")
+            if (scene.name == "MainMenu")
             {
                 inited = false;
                 Initialize();
@@ -74,7 +74,7 @@ namespace BetterModUpload
             Logger.LogError("Unpatching...");
             foreach (var patcher in patchers)
             {
-                patcher.Unpatch(Harmony, Logger);
+                patcher.Dispose();
             }
         }
 

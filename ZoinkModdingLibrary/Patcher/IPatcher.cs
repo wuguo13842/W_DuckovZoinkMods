@@ -6,8 +6,8 @@ namespace ZoinkModdingLibrary.Patcher
     {
         public bool IsPatched { get; }
 
-        public abstract bool Patch(Harmony? harmony, ModLogger? logger);
+        public abstract bool Patch();
 
-        public abstract void Unpatch(Harmony? harmony, ModLogger? logger);
+        public abstract void Unpatch();
     }
 }

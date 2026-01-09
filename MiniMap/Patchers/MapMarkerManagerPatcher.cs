@@ -12,6 +12,7 @@ namespace MiniMap.Patchers
     public class MapMarkerManagerPatcher : PatcherBase
     {
         public static new MapMarkerManagerPatcher Instance { get; } = new MapMarkerManagerPatcher();
+        private MapMarkerManagerPatcher() { }
 
         [MethodPatcher("Load", PatchType.Prefix, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)]
         public static bool LoadPrefix(bool ___loaded)

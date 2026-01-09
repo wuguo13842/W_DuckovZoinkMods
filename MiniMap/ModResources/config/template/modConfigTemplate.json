@@ -148,6 +148,27 @@
                     "default": "Minus"
                 }
             }
+        },
+        "Compatibility.BetterMapMarker": {
+            "descCN": "兼容性-标记所有箱子",
+            "descEN": "Compatibility-BetterMapMarker",
+            "configs": {
+                "betterMapMarker.showInMiniMap": {
+                    "type": "toggle",
+                    "descCN": "在小地图中显示",
+                    "descEN": "Show In Mini Map",
+                    "default": false
+                },
+                "betterMapMarker.poiScaleFactor": {
+                    "type": "slider",
+                    "descCN": "图标缩放系数",
+                    "descEN": "Icon Scale Factor",
+                    "default": 1,
+                    "min": 0.1,
+                    "max": 2.0,
+                    "decimalPlaces": 2
+                }
+            }
         }
     },
     "extraConfigs": {
