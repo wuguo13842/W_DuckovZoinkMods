@@ -1,4 +1,5 @@
 ﻿using Duckov.MiniMaps;
+using ItemStatsSystem;
 using System.Reflection;
 using ZoinkModdingLibrary.Attributes;
 using ZoinkModdingLibrary.Patcher;
@@ -18,11 +19,29 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
         [MethodPatcher("UpdateMarker", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static void UpdateMarkerPrefix(object marker)
         {
-            SimplePointOfInterest? poi = AssemblyOption.GetField<SimplePointOfInterest>(marker, "Poi");
+            SimplePointOfInterest? poi = marker.GetField<SimplePointOfInterest>("Poi");
             if (poi != null)
             {
-                poi.name = poi.name.Replace("CharacterMarker", "LootboxMarker");
+                poi.name = "LootboxMarker:" + poi.name;
             }
+        }
+
+        [MethodPatcher("GetDisplayName", PatchType.Prefix, BindingFlags.Static | BindingFlags.NonPublic)]
+        public static bool GetDisplayNamePrefix(InteractableLootbox lootbox, ref string __result)
+        {
+            bool flag = lootbox.name.Contains("Formula", StringComparison.OrdinalIgnoreCase);
+            string? name = null;
+            if (flag)
+            {
+                if (lootbox.Inventory.Content.Count > 0)
+                {
+                    Item item = lootbox.Inventory[0];
+                    name = item.GetField<string>("displayName");
+                }
+            }
+            __result = (name ?? lootbox.GetField<string>("displayNameKey")) ?? "";
+
+            return false;
         }
     }
 }

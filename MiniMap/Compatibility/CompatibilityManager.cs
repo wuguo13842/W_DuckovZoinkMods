@@ -16,8 +16,9 @@ namespace MiniMap.Compatibility
 
         private List<CompatibilityPatcherBase> patchers = new List<CompatibilityPatcherBase>()
         {
+             BossLiveMapMod_ModBehaviourPatcher.Instance,
              BetterMapMarker_ModBehaviourPatcher.Instance, // BetterMapMarker 兼容补丁
-             ShoulderSurfing_PlayerArrowPatcher.Instance
+             ShoulderSurfing_PlayerArrowPatcher.Instance,
         };
 
         private void Awake()

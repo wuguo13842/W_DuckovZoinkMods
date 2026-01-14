@@ -83,7 +83,7 @@
             "configs": {
                 "showOnlyActivated": {
                     "type": "toggle",
-                    "descCN": "仅显示附近敌人",
+                    "descCN": "仅显示附近敌人（建议打开）",
                     "descEN": "Show Nearby Only",
                     "default": true
                 },
@@ -155,7 +155,7 @@
             "configs": {
                 "betterMapMarker.showInMiniMap": {
                     "type": "toggle",
-                    "descCN": "在小地图中显示",
+                    "descCN": "在小地图中显示（不建议开启）",
                     "descEN": "Show In Mini Map",
                     "default": false
                 },
@@ -179,6 +179,21 @@
                     "descCN": "显示玩家指示器",
                     "descEN": "Show Player Arrow",
                     "default": false
+                }
+            }
+        },
+        "Compatibility.BossLiveMap": {
+            "descCN": "兼容性-Boss实时地图标记",
+            "descEN": "Compatibility-BossLiveMap",
+            "configs": {
+                "bossLiveMap.poiScaleFactor": {
+                    "type": "slider",
+                    "descCN": "图标缩放系数",
+                    "descEN": "Icon Scale Factor",
+                    "default": 1,
+                    "min": 0.1,
+                    "max": 2.0,
+                    "decimalPlaces": 2
                 }
             }
         }

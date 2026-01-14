@@ -475,7 +475,7 @@ namespace MiniMap.Managers
                         ModBehaviour.Logger.Log($"已生成小地图");
                         PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.MainCharacter, out _, out DirectionPointOfInterest? mainDirectionPoi);
                         PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.PetCharacter, out CharacterPointOfInterest? petPoi, out DirectionPointOfInterest? petDirectionPoi);
-                        AssemblyOption.InvokeMethod(MapMarkerManager.Instance, "Load");
+                        MapMarkerManager.Instance.InvokeMethod("Load");
                         CallDisplayMethod("HandlePointsOfInterests");
                     }
                 }
@@ -652,7 +652,7 @@ namespace MiniMap.Managers
                 }
                 duplicatedMinimapObject = GameObject.Instantiate(originalGameObject);
                 duplicatedMinimapDisplay = duplicatedMinimapObject.GetComponent(originalDisplay.GetType()) as MiniMapDisplay;
-                AssemblyOption.SetField(duplicatedMinimapDisplay, "autoSetupOnEnable", true);
+                duplicatedMinimapDisplay.SetField("autoSetupOnEnable", true);
                 CallDisplayMethod("UnregisterEvents");
                 CallDisplayMethod("RegisterEvents");
                 if (duplicatedMinimapDisplay == null || duplicatedMinimapObject == null)

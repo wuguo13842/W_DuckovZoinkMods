@@ -33,7 +33,6 @@ namespace ZoinkModdingLibrary.Patcher
             }
             try
             {
-                harmony?.Unpatch(original, HarmonyPatchType.All, harmony.Id);
                 harmony?.Patch(original, prefix, postfix, transpiler, finalizer);
                 modLogger.Log($"{original.Name} Patched");
             }
