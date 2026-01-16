@@ -1,14 +1,17 @@
 using Cysharp.Threading.Tasks;
 using Duckov.MiniMaps;
 using Duckov.MiniMaps.UI;
+using LeTai.TrueShadow;
 using MiniMap.MonoBehaviours;
 using MiniMap.Poi;
 using MiniMap.Utils;
 using System.Collections;
 using System.Reflection;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.UI.ProceduralImage;
 using ZoinkModdingLibrary.GameUI;
 using ZoinkModdingLibrary.Patcher;
 using ZoinkModdingLibrary.Utils;
@@ -21,11 +24,11 @@ namespace MiniMap.Managers
         public static bool isToggled = false;
         public static bool IsInitialized { get; private set; } = false;
 
-        public static Vector2 miniMapSize = new Vector2(200, 200);
+        public static Vector2 miniMapSize = new Vector2(200f, 200f);
 
         public static float MapBorderEulerZRotation = 0f;
-        public static float MapNorthEulerZRotation = 45f;
-        public static Vector2 displayZoomRange = new Vector2(0.1f, 30);
+        //public static float MapNorthEulerZRotation = 0f;
+        public static Vector2 displayZoomRange = new Vector2(0.1f, 30f);
 
         public static Color backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
 
@@ -53,6 +56,7 @@ namespace MiniMap.Managers
         private static RectTransform? miniMapRect;
         private static RectTransform? miniMapViewportRect;
         private static RectTransform? miniMapNorthRect;
+        private static RectTransform? northRect;
 
         private static Coroutine? settingCor;
         private static Coroutine? initMapCor;
@@ -283,9 +287,21 @@ namespace MiniMap.Managers
                 return;
             }
             float miniMapWindowScale = ModSettingManager.GetValue<float>("miniMapWindowScale");
-            Vector3 scaleVector = Vector3.one * miniMapWindowScale;
-            if (miniMapContainer.transform.localScale != scaleVector)
-                miniMapContainer.transform.localScale = scaleVector;
+            //Vector3 scaleVector = Vector3.one * miniMapWindowScale;
+            //if (miniMapContainer.transform.localScale != scaleVector)
+            //    miniMapContainer.transform.localScale = scaleVector;
+            if (miniMapContainer.transform is RectTransform rect)
+            {
+                Vector2 targetSize = miniMapSize * miniMapWindowScale;
+                if (!rect.sizeDelta.Equals(targetSize))
+                {
+                    rect.sizeDelta = targetSize;
+                    if (northRect != null)
+                    {
+                        northRect.anchoredPosition = new Vector2(0, targetSize.y / 2f);
+                    }
+                }
+            }
         }
 
         private static void OnMinimapPositionChanged()
@@ -528,8 +544,10 @@ namespace MiniMap.Managers
                 {
                     return;
                 }
-                Image image = maskObject.AddComponent<Image>();
-                image.sprite = ModFileOperations.LoadSprite("MiniMapMask.png");
+                ProceduralImage image = maskObject.AddComponent<ProceduralImage>();
+                maskObject.AddComponent<RoundModifier>();
+                image.BorderWidth = 0;
+                image.color = Color.white;
                 Mask mask = maskObject.AddComponent<Mask>();
                 mask.showMaskGraphic = false;
 
@@ -539,8 +557,17 @@ namespace MiniMap.Managers
                 {
                     return;
                 }
-                Image border = borderObject.AddComponent<Image>();
-                border.sprite = ModFileOperations.LoadSprite("MiniMapBorder.png");
+                ProceduralImage border = borderObject.AddComponent<ProceduralImage>();
+                borderObject.AddComponent<RoundModifier>();
+                border.BorderWidth = 4f;
+                border.FalloffDistance = 3f;
+                border.color = Color.white;
+                TrueShadow shadow = borderObject.AddComponent<TrueShadow>();
+                shadow.ColorBleedMode = ColorBleedMode.Black;
+                shadow.Color = ColorUtility.TryParseHtmlString("#3BADEE", out Color color) ? color : Color.clear;
+                //shadow.OffsetDistance = 1;
+                shadow.Size = 10f;
+                shadow.Spread = 0.2f;
                 miniMapBorderRect.eulerAngles = new Vector3(0f, 0f, MapBorderEulerZRotation);
 
                 // 创建指北针区域
@@ -549,8 +576,20 @@ namespace MiniMap.Managers
                 {
                     return;
                 }
-                Image north = northObject.AddComponent<Image>();
-                north.sprite = ModFileOperations.LoadSprite("MiniMapNorth.png");
+                GameObject north = new GameObject("North");
+                northRect = north.AddComponent<RectTransform>();
+                northRect.SetParent(miniMapNorthRect);
+                northRect.sizeDelta = new Vector2(0f, 40f);
+                northRect.pivot = new Vector2(0.5f, 0f);
+                northRect.anchorMin = new Vector2(0.5f, 0.5f);
+                northRect.anchorMax = new Vector2(0.5f, 0.5f);
+                northRect.anchoredPosition = new Vector2(0, miniMapSize.y / 2f);
+                TextMeshProUGUI text = north.AddComponent<TextMeshProUGUI>();
+                text.alignment = TextAlignmentOptions.Midline;
+                text.color = new Color(1f, 0.3f, 0.3f);
+                text.fontSize = 30f;
+                text.fontStyle = FontStyles.Bold;
+                text.text = "N";
 
                 // 创建视窗区域
                 GameObject viewportObject = new GameObject("Zoink_MiniMapViewport");
@@ -562,7 +601,7 @@ namespace MiniMap.Managers
 
                 miniMapScaleContainer = new GameObject("Zoink_MiniMapScaleContainer");
                 var scaleRect = miniMapScaleContainer.AddComponent<RectTransform>();
-                scaleRect.localScale = Vector3.one * 0.5f;
+                scaleRect.localScale = Vector3.one * 0.8f;
                 scaleRect.SetParent(miniMapViewportRect);
 
                 // 设置遮罩为容器的子对象，并填满容器
@@ -747,13 +786,13 @@ namespace MiniMap.Managers
                 {
                     var rotation = MiniMapCommon.GetPlayerMinimapRotationInverse();
                     duplicatedMinimapDisplay.transform.rotation = rotation;
-                    miniMapNorthRect.localRotation = Quaternion.Euler(0, 0, rotation.eulerAngles.z + MapNorthEulerZRotation);
+                    miniMapNorthRect.localRotation = Quaternion.Euler(0, 0, rotation.eulerAngles.z/* + MapNorthEulerZRotation*/);
                 }
                 else
                 {
                     var rotation = Quaternion.Euler(0f, 0f, MiniMapCommon.originMapZRotation);
                     duplicatedMinimapDisplay.transform.rotation = rotation;
-                    miniMapNorthRect.localRotation = Quaternion.Euler(0, 0, rotation.eulerAngles.z + MapNorthEulerZRotation);
+                    miniMapNorthRect.localRotation = Quaternion.Euler(0, 0, rotation.eulerAngles.z/* + MapNorthEulerZRotation*/);
                 }
             }
             catch (Exception e)
