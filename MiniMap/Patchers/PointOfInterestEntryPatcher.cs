@@ -4,9 +4,11 @@ using Duckov.Utilities;
 using MiniMap.Managers;
 using MiniMap.Poi;
 using System.Reflection;
+using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.UI.ProceduralImage;
 using ZoinkModdingLibrary.Attributes;
 using ZoinkModdingLibrary.Patcher;
 
@@ -17,6 +19,37 @@ namespace MiniMap.Patchers
     {
         public static new PatcherBase Instance { get; } = new PointOfInterestEntryPatcher();
         private PointOfInterestEntryPatcher() { }
+
+        [MethodPatcher("UpdateScale", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
+        public static bool UpdateScalePrefix(
+            PointOfInterestEntry __instance,
+            MiniMapDisplay ___master,
+            IPointOfInterest ___pointOfInterest,
+            Transform ___iconContainer,
+            ProceduralImage ___areaDisplay,
+            float ___areaLineThickness
+        )
+        {
+            float d = ___pointOfInterest?.ScaleFactor ?? 1f;
+            float parentLocalScale = __instance.GetProperty<float>("ParentLocalScale");
+            int iconScaleType = ModSettingManager.GetValue("iconScaleType", 0);
+            var baseScale = Vector3.one * d / parentLocalScale;
+            ___iconContainer.localScale = ___master != CustomMinimapManager.DuplicatedMinimapDisplay ?
+                baseScale :
+                iconScaleType switch
+                {
+                    1 => baseScale * ModSettingManager.GetValue("miniMapWindowScale", 1f) / 1.5f,
+                    2 => baseScale * ModSettingManager.GetValue("displayZoomScale", 5f) / 5,
+                    _ or 0 => baseScale,
+                };
+            if (___pointOfInterest != null && ___pointOfInterest.IsArea)
+            {
+                ___areaDisplay.BorderWidth = ___areaLineThickness / parentLocalScale;
+                ___areaDisplay.FalloffDistance = 1f / parentLocalScale;
+            }
+
+            return false;
+        }
 
         [MethodPatcher("UpdateRotation", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static bool UpdateRotationPrefix(PointOfInterestEntry __instance, MiniMapDisplayEntry ___minimapEntry)
@@ -43,7 +76,7 @@ namespace MiniMap.Patchers
         }
 
         [MethodPatcher("Update", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static bool UpdatePrefix(PointOfInterestEntry __instance, Image ___icon, MiniMapDisplay ___master)
+        public static bool UpdatePrefix(PointOfInterestEntry __instance, Image ___icon, MiniMapDisplay ___master, TextMeshProUGUI ___displayName)
         {
             if (__instance.Target == null || __instance.Target.IsDestroyed())
             {
@@ -55,10 +88,13 @@ namespace MiniMap.Patchers
             //    return false;
             //}
             //lastUpdateTime = Time.time;
-            if(__instance.Target is IPointOfInterest poi && poi.Color != ___icon.color)
+            if (__instance.Target is IPointOfInterest poi)
             {
-                ___icon.color = poi.Color;
-                return true;
+                if (poi.Color != ___icon.color)
+                {
+                    ___icon.color = poi.Color;
+                }
+                ___displayName.text = ___master == CustomMinimapManager.DuplicatedMinimapDisplay && ModSettingManager.GetValue("hideDisplayName", false) ? "" : poi.DisplayName;
             }
             RectTransform icon = ___icon.rectTransform;
             RectTransform? layout = icon.parent as RectTransform;

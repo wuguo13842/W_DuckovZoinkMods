@@ -398,8 +398,9 @@ namespace MiniMap.Managers
             return null;
         }
 
-        public static string GetActualDropdownValue(string key, int index, bool isChinese = true)
+        public static string GetActualDropdownValue(string key, bool isChinese = true)
         {
+            int index = GetValue(key, 0);
             JObject? template = GetTemplate(key, ModSettingsTemplates);
             List<string>? options = (template?[isChinese ? "optionsCN" : "optionsEN"] as JArray)?.ToList<string>();
             if (options == null)

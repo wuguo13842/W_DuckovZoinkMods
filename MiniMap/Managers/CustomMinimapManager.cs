@@ -5,6 +5,7 @@ using LeTai.TrueShadow;
 using MiniMap.MonoBehaviours;
 using MiniMap.Poi;
 using MiniMap.Utils;
+using SodaCraft.Localizations;
 using System.Collections;
 using System.Reflection;
 using TMPro;
@@ -24,7 +25,8 @@ namespace MiniMap.Managers
         public static bool isToggled = false;
         public static bool IsInitialized { get; private set; } = false;
 
-        public static Vector2 miniMapSize = new Vector2(200f, 200f);
+        private static Vector2 miniMapSize = new Vector2(200f, 200f);
+        private static float northFontSize = 18f;
 
         public static float MapBorderEulerZRotation = 0f;
         //public static float MapNorthEulerZRotation = 0f;
@@ -57,6 +59,7 @@ namespace MiniMap.Managers
         private static RectTransform? miniMapViewportRect;
         private static RectTransform? miniMapNorthRect;
         private static RectTransform? northRect;
+        private static TextMeshProUGUI? northText;
 
         private static Coroutine? settingCor;
         private static Coroutine? initMapCor;
@@ -299,6 +302,10 @@ namespace MiniMap.Managers
                     if (northRect != null)
                     {
                         northRect.anchoredPosition = new Vector2(0, targetSize.y / 2f);
+                    }
+                    if (northText != null)
+                    {
+                        northText.fontSize = northFontSize * miniMapWindowScale;
                     }
                 }
             }
@@ -584,12 +591,13 @@ namespace MiniMap.Managers
                 northRect.anchorMin = new Vector2(0.5f, 0.5f);
                 northRect.anchorMax = new Vector2(0.5f, 0.5f);
                 northRect.anchoredPosition = new Vector2(0, miniMapSize.y / 2f);
-                TextMeshProUGUI text = north.AddComponent<TextMeshProUGUI>();
-                text.alignment = TextAlignmentOptions.Midline;
-                text.color = new Color(1f, 0.3f, 0.3f);
-                text.fontSize = 30f;
-                text.fontStyle = FontStyles.Bold;
-                text.text = "N";
+                northText = north.AddComponent<TextMeshProUGUI>();
+                northText.alignment = TextAlignmentOptions.Bottom;
+                northText.color = new Color(1f, 0.4f, 0.4f);
+                northText.fontSize = northFontSize;
+                northText.fontStyle = FontStyles.Bold;
+                TextLocalizor localizor = north.AddComponent<TextLocalizor>();
+                localizor.Key = "Dir_N";
 
                 // 创建视窗区域
                 GameObject viewportObject = new GameObject("Zoink_MiniMapViewport");

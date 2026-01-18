@@ -18,8 +18,7 @@ namespace MiniMap.Utils
             {
                 return Vector3.zero;
             }
-            int index = ModSettingManager.GetValue("facingBase", 0);
-            string facingBase = ModSettingManager.GetActualDropdownValue("facingBase", index, false);
+            string facingBase = ModSettingManager.GetActualDropdownValue("facingBase", false);
             return facingBase == "Mouse"
                 ? LevelManager.Instance.InputManager.InputAimPoint - CharacterMainControl.Main.transform.position
                 : CharacterMainControl.Main.movementControl.targetAimDirection;
