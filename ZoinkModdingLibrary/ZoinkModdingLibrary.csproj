@@ -10,23 +10,19 @@
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="$(DuckovPath)\Managed\TeamSoda.*" />
-    <Reference Include="$(DuckovPath)\Managed\Cinemachine.dll" />
-    <Reference Include="$(DuckovPath)\Managed\ItemStatsSystem.dll" />
+    <!-- Harmony DLL -->
     <Reference Include="0Harmony">
       <HintPath>libs\0Harmony.dll</HintPath>
+      <Private>False</Private>
     </Reference>
-    <Reference Include="$(DuckovPath)\Managed\Unity*" />
-    <!--<Reference Include="$(WorkShopPath)\3597405574\ShoulderSurfing.dll" />-->
-    <!--<Reference Include="$(WorkShopPath)\3589079671\BossLiveMapMod.dll" />-->
-
-    <!-- 包含所有 DLL -->
-    <AllDlls Include="$(ManagedPath)\*.dll" />
-
-    <!-- 定义要排除的系统 DLL -->
-    <SystemDlls Include="$(ManagedPath)\mscorlib.dll;&#xA;                      $(ManagedPath)\System.dll;&#xA;                      $(ManagedPath)\System.*.dll;&#xA;                      $(ManagedPath)\Microsoft.*.dll;&#xA;                      $(ManagedPath)\netstandard.dll;&#xA;                      $(ManagedPath)\WindowsBase.dll" />
-
-    <!-- 引用非系统 DLL -->
-    <Reference Include="@(AllDlls)" Exclude="@(SystemDlls)" />
+    
+    <!-- 其他DLL，排除系统DLL -->
+    <Reference Include="$(ManagedPath)\*.dll" Exclude="$(ManagedPath)\mscorlib.dll;$(ManagedPath)\System.dll;$(ManagedPath)\System.*.dll;$(ManagedPath)\Microsoft.*.dll;$(ManagedPath)\netstandard.dll;$(ManagedPath)\WindowsBase.dll">
+      <Private>False</Private>
+    </Reference>
+    
+    <!-- 项目引用 -->
+    
+    <!-- 资源文件 -->
   </ItemGroup>
 </Project>

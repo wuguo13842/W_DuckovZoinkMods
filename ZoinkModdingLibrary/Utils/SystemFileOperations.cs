@@ -129,7 +129,7 @@ namespace ZoinkModdingLibrary.Utils
                 }
                 catch (Exception ex)
                 {
-                    logger.LogError($"复制失败 {sourceFile}: {ex.Message}");
+                    logger.LogError($"复制失败 {sourceFile}: {ex.Message}"); 
                 }
             }
             logger.LogWarning($"文件复制完毕");
