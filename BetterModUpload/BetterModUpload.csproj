@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
-    <SteamLibrary>D:\SteamLibrary\steamapps</SteamLibrary>
+    <SteamLibrary>S:\SteamLibrary\steamapps</SteamLibrary>
     <WorkShopPath>$(SteamLibrary)\workshop\content\3167020</WorkShopPath>
     <DuckovPath>$(SteamLibrary)\common\Escape from Duckov\Duckov_Data</DuckovPath>
     <ManagedPath>$(DuckovPath)\Managed</ManagedPath>
@@ -11,28 +11,38 @@
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="$(ManagedPath)\TeamSoda.*" />
-    <Reference Include="$(ManagedPath)\Cinemachine.dll" />
-    <Reference Include="$(ManagedPath)\ItemStatsSystem.dll" />
+    <!-- Harmony DLL -->
     <Reference Include="0Harmony">
       <HintPath>libs\0Harmony.dll</HintPath>
+      <Private>False</Private>
     </Reference>
-    <Reference Include="$(ManagedPath)\Unity*" />
+    
+    <!-- 其他DLL，排除系统DLL -->
+    <Reference Include="$(ManagedPath)\*.dll" Exclude="$(ManagedPath)\mscorlib.dll;
+                                                     $(ManagedPath)\System.dll;
+                                                     $(ManagedPath)\System.*.dll;
+                                                     $(ManagedPath)\Microsoft.*.dll;
+                                                     $(ManagedPath)\netstandard.dll;
+                                                     $(ManagedPath)\WindowsBase.dll">
+      <Private>False</Private>
+    </Reference>
+    
+    <!-- 项目引用 -->
+	<ProjectReference Include="..\ZoinkModdingLibrary\ZoinkModdingLibrary.csproj">
+	  <Private>False</Private>
+	</ProjectReference>
+    
+    <!-- 资源文件 -->
     <ModFiles Include="ModFiles\**\*" />
-
-    <!-- 包含所有 DLL -->
-    <AllDlls Include="$(ManagedPath)\*.dll" />
-
-    <!-- 定义要排除的系统 DLL -->
-    <SystemDlls Include="$(ManagedPath)\mscorlib.dll;&#xA;                      $(ManagedPath)\System.dll;&#xA;                      $(ManagedPath)\System.*.dll;&#xA;                      $(ManagedPath)\Microsoft.*.dll;&#xA;                      $(ManagedPath)\netstandard.dll;&#xA;                      $(ManagedPath)\WindowsBase.dll" />
-    <ProjectReference Include="..\ZoinkModdingLibrary\ZoinkModdingLibrary.csproj" />
-
-    <!-- 引用非系统 DLL -->
-    <Reference Include="@(AllDlls)" Exclude="@(SystemDlls)" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+	  <!-- 获取 ZoinkModdingLibrary 的引用路径 -->
+	  <ItemGroup>
+		<ZoinkLibraryFiles Include="@(ReferencePath)" Condition="'%(FileName)' == 'ZoinkModdingLibrary'" />
+	  </ItemGroup>
+	  <Copy SourceFiles="@(ZoinkLibraryFiles)" DestinationFiles="$(CopyPath)\ZoinkModdingLibrary.dll" Condition="'@(ZoinkLibraryFiles)' != ''" />
+	  
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll" DestinationFiles="$(CopyPath)\$(AssemblyName).dll" />
-    <Copy SourceFiles="$(OutputPath)\ZoinkModdingLibrary.dll" DestinationFiles="$(CopyPath)\ZoinkModdingLibrary.dll" />
     <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(CopyPath)\%(RecursiveDir)" SkipUnchangedFiles="true" />
   </Target>
 </Project>
