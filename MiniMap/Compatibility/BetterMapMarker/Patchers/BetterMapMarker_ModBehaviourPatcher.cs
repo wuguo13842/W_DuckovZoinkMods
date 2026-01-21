@@ -1,5 +1,7 @@
 ﻿using Duckov.MiniMaps;
 using ItemStatsSystem;
+using System;
+using System.Collections.Generic;
 using System.Reflection;
 using ZoinkModdingLibrary.Attributes;
 using ZoinkModdingLibrary.Patcher;

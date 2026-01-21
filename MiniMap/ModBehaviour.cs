@@ -10,6 +10,8 @@ using ZoinkModdingLibrary;
 using MiniMap.Compatibility.BetterMapMarker.Patchers;
 using Unity.VisualScripting;
 using MiniMap.Compatibility;
+using System.Collections.Generic;
+using System;
 
 namespace MiniMap
 {

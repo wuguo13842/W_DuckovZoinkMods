@@ -4,6 +4,7 @@ using Duckov.Utilities;
 using MiniMap.Managers;
 using MiniMap.Poi;
 using MiniMap.Utils;
+using System;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -24,7 +25,7 @@ namespace MiniMap.Patchers
         public static bool HandlePointOfInterestPrefix(MiniMapDisplay __instance, MonoBehaviour poi)
         {
             if (poi == null) return false;
-            if (poi is CharacterPointOfInterestBase characterPoi)
+            if (poi is CharacterPoiBase characterPoi)
             {
                 return characterPoi.WillShow(__instance == CustomMinimapManager.OriginalMinimapDisplay);
             }

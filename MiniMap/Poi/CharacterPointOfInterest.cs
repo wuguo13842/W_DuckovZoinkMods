@@ -2,7 +2,7 @@
 
 namespace MiniMap.Poi
 {
-    public class CharacterPointOfInterest : CharacterPointOfInterestBase
+    public class CharacterPointOfInterest : CharacterPoiBase
     {
         private Color color = Color.white;
 

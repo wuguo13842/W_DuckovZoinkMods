@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using MiniMap.Compatibility.BetterMapMarker.Patchers;
 using MiniMap.Compatibility.ShoulderSurfing.Patchers;
+using System.Collections.Generic;
 using UnityEngine;
 using ZoinkModdingLibrary;
 using ZoinkModdingLibrary.Patcher;

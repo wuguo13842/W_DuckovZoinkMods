@@ -1,6 +1,7 @@
 ﻿using MiniMap.Managers;
 using MiniMap.Poi;
 using MiniMap.Utils;
+using System;
 using ZoinkModdingLibrary.Attributes;
 using ZoinkModdingLibrary.Patcher;
 

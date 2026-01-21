@@ -4,13 +4,14 @@ using MiniMap.Extentions;
 using MiniMap.Managers;
 using MiniMap.Utils;
 using SodaCraft.Localizations;
+using System.Collections.Generic;
 using System.Reflection;
 using Unity.VisualScripting;
 using UnityEngine;
 
 namespace MiniMap.Poi
 {
-    public abstract class CharacterPointOfInterestBase : MonoBehaviour, IPointOfInterest
+    public abstract class CharacterPoiBase : MonoBehaviour, IPointOfInterest
     {
         private bool initialized = false;
 

@@ -6,6 +6,7 @@ using MiniMap.MonoBehaviours;
 using MiniMap.Poi;
 using MiniMap.Utils;
 using SodaCraft.Localizations;
+using System;
 using System.Collections;
 using System.Reflection;
 using TMPro;
@@ -21,6 +22,7 @@ namespace MiniMap.Managers
 {
     public static class CustomMinimapManager
     {
+        public static event Action? MiniMapApplied;
         public static bool isEnabled = true;
         public static bool isToggled = false;
         public static bool IsInitialized { get; private set; } = false;
@@ -742,6 +744,7 @@ namespace MiniMap.Managers
 
                 duplicatedMinimapObject.transform.localPosition = Vector3.zero;
                 duplicatedMinimapDisplay.transform.localRotation = Quaternion.identity;
+                MiniMapApplied?.Invoke();
                 CallDisplayMethod("AutoSetup");
                 UpdateDisplayZoom();
                 return true;

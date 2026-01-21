@@ -3,6 +3,7 @@ using Duckov.MiniMaps.UI;
 using Duckov.Utilities;
 using MiniMap.Managers;
 using MiniMap.Poi;
+using System;
 using System.Reflection;
 using TMPro;
 using Unity.VisualScripting;
@@ -14,7 +15,7 @@ using ZoinkModdingLibrary.Patcher;
 
 namespace MiniMap.Patchers
 {
-    [TypePatcher(typeof(PointOfInterestEntry))]
+    [TypePatcher(typeof(CharacterPoiEntry))]
     public class PointOfInterestEntryPatcher : PatcherBase
     {
         public static new PatcherBase Instance { get; } = new PointOfInterestEntryPatcher();
@@ -22,7 +23,7 @@ namespace MiniMap.Patchers
 
         [MethodPatcher("UpdateScale", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static bool UpdateScalePrefix(
-            PointOfInterestEntry __instance,
+            CharacterPoiEntry __instance,
             MiniMapDisplay ___master,
             IPointOfInterest ___pointOfInterest,
             Transform ___iconContainer,
@@ -52,7 +53,7 @@ namespace MiniMap.Patchers
         }
 
         [MethodPatcher("UpdateRotation", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static bool UpdateRotationPrefix(PointOfInterestEntry __instance, MiniMapDisplayEntry ___minimapEntry)
+        public static bool UpdateRotationPrefix(CharacterPoiEntry __instance, MiniMapDisplayEntry ___minimapEntry)
         {
             try
             {
@@ -76,7 +77,7 @@ namespace MiniMap.Patchers
         }
 
         [MethodPatcher("Update", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static bool UpdatePrefix(PointOfInterestEntry __instance, Image ___icon, MiniMapDisplay ___master, TextMeshProUGUI ___displayName)
+        public static bool UpdatePrefix(CharacterPoiEntry __instance, Image ___icon, MiniMapDisplay ___master, TextMeshProUGUI ___displayName)
         {
             if (__instance.Target == null || __instance.Target.IsDestroyed())
             {
@@ -107,7 +108,7 @@ namespace MiniMap.Patchers
         }
 
         [MethodPatcher("Setup", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static void SetupPrefix(PointOfInterestEntry __instance, MonoBehaviour target, Image ___icon)
+        public static void SetupPrefix(CharacterPoiEntry __instance, MonoBehaviour target, Image ___icon)
         {
             if (target is IPointOfInterest poi)
             {

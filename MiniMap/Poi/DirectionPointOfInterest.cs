@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace MiniMap.Poi
 {
-    public class DirectionPointOfInterest : CharacterPointOfInterestBase
+    public class DirectionPointOfInterest : CharacterPoiBase
     {
         private float rotationEulerAngle;
         private float baseEulerAngle;
