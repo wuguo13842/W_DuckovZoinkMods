@@ -13,7 +13,6 @@ using MiniMap.Compatibility;
 
 namespace MiniMap
 {
-
     public class ModBehaviour : Duckov.Modding.ModBehaviour
     {
         public static readonly string MOD_ID = "com.zoink.minimap";
@@ -115,6 +114,9 @@ namespace MiniMap
             }
             Instance = this;
             gameObject.GetOrAddComponent<CompatibilityManager>();
+            
+            // 添加POI缓存管理器
+            gameObject.GetOrAddComponent<PoiCacheManager>();
         }
 
         void OnEnable()

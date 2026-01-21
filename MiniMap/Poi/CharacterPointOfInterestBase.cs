@@ -1,4 +1,4 @@
-﻿using Duckov.MiniMaps;
+﻿﻿using Duckov.MiniMaps;
 using Duckov.Scenes;
 using MiniMap.Extentions;
 using MiniMap.Managers;
@@ -29,6 +29,9 @@ namespace MiniMap.Poi
         private float scaleFactor = 1f;
         private bool hideIcon = false;
         private string? overrideSceneID;
+
+        private Vector3 _lastPosition;
+        private const float POSITION_CHANGE_THRESHOLD = 0.1f; // 位置变化阈值
 
         public virtual bool Initialized => initialized;
         public virtual CharacterMainControl? Character => character;
@@ -78,9 +81,17 @@ namespace MiniMap.Poi
         public virtual bool IsArea { get => isArea; set => isArea = value; }
         public virtual float AreaRadius { get => areaRadius; set => areaRadius = value; }
         public virtual bool HideIcon { get => hideIcon; set => hideIcon = value; }
+
         protected virtual void OnEnable()
         {
             Register();
+            _lastPosition = transform.position;
+            
+            // 初始时通知缓存管理器
+            if (PoiCacheManager.Instance != null)
+            {
+               PoiCacheManager.Instance.ForceUpdateInstance(this); 
+            }
         }
 
         protected virtual void OnDisable()
@@ -91,39 +102,56 @@ namespace MiniMap.Poi
             }
         }
 
-        public virtual void Setup(Sprite? icon, CharacterMainControl character, CharacterType characterType, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
-        {
-            if (initialized) return;
-            this.character = character;
-            this.characterType = characterType;
-            this.icon = icon;
-            this.cachedName = cachedName;
-            this.followActiveScene = followActiveScene;
-            this.overrideSceneID = overrideSceneID;
-            ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
-            ModSettingManager.ConfigChanged += OnConfigChanged;
-            initialized = true;
-        }
+public virtual void Setup(Sprite? icon, CharacterMainControl character, CharacterType characterType, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
+{
+    if (initialized) return;
+    this.character = character;
+    this.characterType = characterType;
+    this.icon = icon;
+    this.cachedName = cachedName;
+    this.followActiveScene = followActiveScene;
+    this.overrideSceneID = overrideSceneID;
+    ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
+    ModSettingManager.ConfigChanged += OnConfigChanged;
+    initialized = true;
+    
+    // 特殊标记：如果是玩家，强制更新一次
+    if (characterType == CharacterType.Main && PoiCacheManager.Instance != null)
+    {
+        PoiCacheManager.Instance.ForceUpdateInstance(this); // 修改这里
+    }
+    
+    _lastPosition = transform.position;
+}
 
-        public virtual void Setup(SimplePointOfInterest poi, CharacterMainControl character, CharacterType characterType, bool followActiveScene = false, string? overrideSceneID = null)
-        {
-            if (initialized) return;
-            this.character = character;
-            this.characterType = characterType;
-            this.icon = GameObject.Instantiate(poi.Icon);
-            FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
-            this.cachedName = field.GetValue(poi) as string;
-            this.followActiveScene = followActiveScene;
-            this.overrideSceneID = overrideSceneID;
-            this.isArea = poi.IsArea;
-            this.areaRadius = poi.AreaRadius;
-            this.color = poi.Color;
-            this.shadowColor = poi.ShadowColor;
-            this.shadowDistance = poi.ShadowDistance;
-            ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
-            ModSettingManager.ConfigChanged += OnConfigChanged;
-            initialized = true;
-        }
+public virtual void Setup(SimplePointOfInterest poi, CharacterMainControl character, CharacterType characterType, bool followActiveScene = false, string? overrideSceneID = null)
+{
+    if (initialized) return;
+    this.character = character;
+    this.characterType = characterType;
+    this.icon = GameObject.Instantiate(poi.Icon);
+    FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
+    this.cachedName = field.GetValue(poi) as string;
+    this.followActiveScene = followActiveScene;
+    this.overrideSceneID = overrideSceneID;
+    this.isArea = poi.IsArea;
+    this.areaRadius = poi.AreaRadius;
+    this.color = poi.Color;
+    this.shadowColor = poi.ShadowColor;
+    this.shadowDistance = poi.ShadowDistance;
+    ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
+    ModSettingManager.ConfigChanged += OnConfigChanged;
+    initialized = true;
+    
+    // 初始位置
+    _lastPosition = transform.position;
+    
+    // 通知缓存管理器
+    if (PoiCacheManager.Instance != null)
+    {
+        PoiCacheManager.Instance.ForceUpdateInstance(this); // 修改这里
+    }
+}
 
         private void OnConfigChanged(string key, object? value)
         {
@@ -149,18 +177,33 @@ namespace MiniMap.Poi
             }
         }
 
-        protected virtual void Update()
+protected virtual void Update()
+{
+    if (character != null && characterType != CharacterType.Main && PoiCommon.IsDead(character))
+    {
+        Destroy(gameObject);
+        return;
+    }
+    
+    // 检查位置是否有明显变化，如果有则通知缓存管理器
+    if (PoiCacheManager.Instance != null)
+    {
+        Vector3 currentPosition = transform.position;
+        float distanceMoved = Vector3.Distance(currentPosition, _lastPosition);
+        
+        if (distanceMoved > POSITION_CHANGE_THRESHOLD)
         {
-            if (character != null && characterType != CharacterType.Main && PoiCommon.IsDead(character))
-            {
-                Destroy(this.gameObject);
-                return;
-            }
+            _lastPosition = currentPosition;
+            PoiCacheManager.Instance.ForceUpdateInstance(this); // 修改这里
         }
+    }
+}
 
         protected void OnDestroy()
         {
             ModSettingManager.ConfigChanged -= OnConfigChanged;
+            
+            // 缓存管理器会自动清理，但我们可以主动通知（可选）
         }
 
         public virtual void Register(bool force = false)

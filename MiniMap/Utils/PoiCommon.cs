@@ -1,4 +1,4 @@
-﻿using Duckov.MiniMaps;
+﻿﻿using Duckov.MiniMaps;
 using MiniMap.Extentions;
 using MiniMap.Managers;
 using MiniMap.Poi;
@@ -130,6 +130,15 @@ namespace MiniMap.Utils
                 directionPoi.ScaleFactor = scaleFactor;
                 directionPoi.Setup(icon, character, characterType, cachedName: preset?.DisplayName, followActiveScene: true);
             }
+            
+            // 通知缓存管理器（如果已初始化）
+    if (PoiCacheManager.Instance != null)
+    {
+        if (characterPoi != null)
+            PoiCacheManager.Instance.ForceUpdateInstance(characterPoi); // 修改这里
+        if (directionPoi != null)
+            PoiCacheManager.Instance.ForceUpdateInstance(directionPoi); // 修改这里
+    }
         }
 
         public static bool IsDead(CharacterMainControl? character)

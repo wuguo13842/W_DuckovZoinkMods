@@ -76,26 +76,87 @@ namespace MiniMap.Patchers
         }
 
         [MethodPatcher("Update", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static bool UpdatePrefix(PointOfInterestEntry __instance, Image ___icon, MiniMapDisplay ___master, TextMeshProUGUI ___displayName)
+        public static bool UpdatePrefix(
+            PointOfInterestEntry __instance, 
+            Image ___icon, 
+            MiniMapDisplay ___master, 
+            TextMeshProUGUI ___displayName,
+            Transform ___iconContainer,
+            MonoBehaviour ___target)
         {
-            if (__instance.Target == null || __instance.Target.IsDestroyed())
+            if (___target == null || ___target.IsDestroyed())
             {
                 GameObject.Destroy(__instance.gameObject);
                 return false;
             }
-            //if (___master == CustomMinimapManager.DuplicatedMinimapDisplay && !(__instance.Target?.gameObject.activeInHierarchy ?? false))
-            //{
-            //    return false;
-            //}
-            //lastUpdateTime = Time.time;
-            if (__instance.Target is IPointOfInterest poi)
+
+            // 尝试使用缓存数据
+            if (PoiCacheManager.Instance != null && 
+                PoiCacheManager.Instance.TryGetInstanceData(___target, 
+                    out Vector3 mapPosition, 
+                    out Quaternion rotation,
+                    out Color color,
+                    out string displayName,
+                    out bool hideIcon,
+                    out float scaleFactor))
             {
-                if (poi.Color != ___icon.color)
+                // 设置位置
+                __instance.transform.position = mapPosition;
+                
+                // 设置缩放
+                float parentLocalScale = __instance.GetProperty<float>("ParentLocalScale");
+                int iconScaleType = ModSettingManager.GetValue("iconScaleType", 0);
+                var baseScale = Vector3.one * scaleFactor / parentLocalScale;
+                
+                ___iconContainer.localScale = ___master != CustomMinimapManager.DuplicatedMinimapDisplay ?
+                    baseScale :
+                    iconScaleType switch
+                    {
+                        1 => baseScale * ModSettingManager.GetValue("miniMapWindowScale", 1f) / 1.5f,
+                        2 => baseScale * ModSettingManager.GetValue("displayZoomScale", 5f) / 5,
+                        _ or 0 => baseScale,
+                    };
+                
+                // 设置颜色和文本
+                ___icon.color = color;
+                ___displayName.text = ___master == CustomMinimapManager.DuplicatedMinimapDisplay && 
+                    ModSettingManager.GetValue("hideDisplayName", false) ? "" : displayName;
+                
+                // 设置旋转
+                __instance.transform.rotation = rotation;
+                
+                // 设置图标显示
+                ___icon.gameObject.SetActive(!hideIcon);
+                
+                // 标记为已使用缓存（通过反射设置私有字段）
+                FieldInfo usedCacheField = typeof(PointOfInterestEntry).GetField("_usedCacheThisFrame", 
+                    BindingFlags.NonPublic | BindingFlags.Instance);
+                if (usedCacheField != null)
                 {
-                    ___icon.color = poi.Color;
+                    usedCacheField.SetValue(__instance, true);
                 }
-                ___displayName.text = ___master == CustomMinimapManager.DuplicatedMinimapDisplay && ModSettingManager.GetValue("hideDisplayName", false) ? "" : poi.DisplayName;
+                
+                return false; // 跳过原版Update
             }
+            
+            // 缓存不可用，使用原版逻辑
+            FieldInfo usedCacheField2 = typeof(PointOfInterestEntry).GetField("_usedCacheThisFrame", 
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (usedCacheField2 != null)
+            {
+                usedCacheField2.SetValue(__instance, false);
+            }
+            
+            if (__instance.Target is IPointOfInterest poi2)
+            {
+                if (poi2.Color != ___icon.color)
+                {
+                    ___icon.color = poi2.Color;
+                }
+                ___displayName.text = ___master == CustomMinimapManager.DuplicatedMinimapDisplay && 
+                    ModSettingManager.GetValue("hideDisplayName", false) ? "" : poi2.DisplayName;
+            }
+            
             RectTransform icon = ___icon.rectTransform;
             RectTransform? layout = icon.parent as RectTransform;
             if (layout == null) { return true; }
