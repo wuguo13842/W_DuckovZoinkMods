@@ -1,7 +1,10 @@
 ﻿using Duckov.MiniMaps;
 using ItemStatsSystem;
+using SodaCraft.Localizations;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnityEngine;
 using ZoinkModdingLibrary.Attributes;
 using ZoinkModdingLibrary.Patcher;
 
@@ -30,5 +33,26 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
             return false;
         }
 
+        [MethodPatcher("FormatListEntry", PatchType.Prefix, BindingFlags.Static | BindingFlags.NonPublic)]
+        public static bool FormatListEntryPrefix(object entry, ref string __result)
+        {
+            if (entry == null)
+            {
+                __result = string.Empty;
+                return false;
+            }
+
+            string name = entry.GetField<string>("DisplayName")?.ToPlainText() ?? string.Empty;
+            if (!entry.GetField<bool>("Alive"))
+            {
+                name = "<s>" + name + "</s>";
+            }
+            Type? modType = AssemblyOption.FindTypeInAssemblies("BossLiveMapMod", "BossLiveMapMod.ModBehaviour", ModBehaviour.Logger);
+            Color color = modType?.InvokeStaticMethod<Color>("GetBossListTextColor", new object[] { entry }) ?? Color.white;
+
+            string colorHex = ColorUtility.ToHtmlStringRGBA(color);
+            __result = $"<color=#{colorHex}>{name}</color>";
+            return false;
+        }
     }
 }

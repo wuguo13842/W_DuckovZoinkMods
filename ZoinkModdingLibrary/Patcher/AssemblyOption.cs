@@ -75,6 +75,23 @@ namespace ZoinkModdingLibrary.Patcher
             }
             return default;
         }
+
+        public static object? InvokeStaticMethod(this Type type,  string methodName, object[]? parameters = null)
+        {
+            MethodInfo method = type.GetMethod(methodName, BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+            return method?.Invoke(null, parameters);
+        }
+
+        public static T? InvokeStaticMethod<T>(this Type type,  string methodName, object[]? parameters = null)
+        {
+            object? result = type.InvokeStaticMethod(methodName, parameters);
+            if (result is T typedResult)
+            {
+                return typedResult;
+            }
+            return default;
+        }
+
         private static readonly ConcurrentDictionary<(object? eventOwner, EventInfo eventInfo, Delegate handler), Delegate> _boundHandlers = new ConcurrentDictionary<(object?, EventInfo, Delegate), Delegate>();
 
         #region 多参数事件绑定重载
