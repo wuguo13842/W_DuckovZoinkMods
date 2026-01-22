@@ -102,56 +102,56 @@ namespace MiniMap.Poi
             }
         }
 
-public virtual void Setup(Sprite? icon, CharacterMainControl character, CharacterType characterType, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
-{
-    if (initialized) return;
-    this.character = character;
-    this.characterType = characterType;
-    this.icon = icon;
-    this.cachedName = cachedName;
-    this.followActiveScene = followActiveScene;
-    this.overrideSceneID = overrideSceneID;
-    ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
-    ModSettingManager.ConfigChanged += OnConfigChanged;
-    initialized = true;
-    
-    // 特殊标记：如果是玩家，强制更新一次
-    if (characterType == CharacterType.Main && PoiCacheManager.Instance != null)
-    {
-        PoiCacheManager.Instance.ForceUpdateInstance(this); // 修改这里
-    }
-    
-    _lastPosition = transform.position;
-}
+        public virtual void Setup(Sprite? icon, CharacterMainControl character, CharacterType characterType, string? cachedName = null, bool followActiveScene = false, string? overrideSceneID = null)
+        {
+            if (initialized) return;
+            this.character = character;
+            this.characterType = characterType;
+            this.icon = icon;
+            this.cachedName = cachedName;
+            this.followActiveScene = followActiveScene;
+            this.overrideSceneID = overrideSceneID;
+            ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
+            ModSettingManager.ConfigChanged += OnConfigChanged;
+            initialized = true;
+            
+            // 特殊标记：如果是玩家，强制更新一次
+            if (characterType == CharacterType.Main && PoiCacheManager.Instance != null)
+            {
+                PoiCacheManager.Instance.ForceUpdateInstance(this);
+            }
+            
+            _lastPosition = transform.position;
+        }
 
-public virtual void Setup(SimplePointOfInterest poi, CharacterMainControl character, CharacterType characterType, bool followActiveScene = false, string? overrideSceneID = null)
-{
-    if (initialized) return;
-    this.character = character;
-    this.characterType = characterType;
-    this.icon = GameObject.Instantiate(poi.Icon);
-    FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
-    this.cachedName = field.GetValue(poi) as string;
-    this.followActiveScene = followActiveScene;
-    this.overrideSceneID = overrideSceneID;
-    this.isArea = poi.IsArea;
-    this.areaRadius = poi.AreaRadius;
-    this.color = poi.Color;
-    this.shadowColor = poi.ShadowColor;
-    this.shadowDistance = poi.ShadowDistance;
-    ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
-    ModSettingManager.ConfigChanged += OnConfigChanged;
-    initialized = true;
-    
-    // 初始位置
-    _lastPosition = transform.position;
-    
-    // 通知缓存管理器
-    if (PoiCacheManager.Instance != null)
-    {
-        PoiCacheManager.Instance.ForceUpdateInstance(this); // 修改这里
-    }
-}
+        public virtual void Setup(SimplePointOfInterest poi, CharacterMainControl character, CharacterType characterType, bool followActiveScene = false, string? overrideSceneID = null)
+        {
+            if (initialized) return;
+            this.character = character;
+            this.characterType = characterType;
+            this.icon = GameObject.Instantiate(poi.Icon);
+            FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
+            this.cachedName = field.GetValue(poi) as string;
+            this.followActiveScene = followActiveScene;
+            this.overrideSceneID = overrideSceneID;
+            this.isArea = poi.IsArea;
+            this.areaRadius = poi.AreaRadius;
+            this.color = poi.Color;
+            this.shadowColor = poi.ShadowColor;
+            this.shadowDistance = poi.ShadowDistance;
+            ShowOnlyActivated = ModSettingManager.GetValue("showOnlyActivated", false);
+            ModSettingManager.ConfigChanged += OnConfigChanged;
+            initialized = true;
+            
+            // 初始位置
+            _lastPosition = transform.position;
+            
+            // 通知缓存管理器
+            if (PoiCacheManager.Instance != null)
+            {
+                PoiCacheManager.Instance.ForceUpdateInstance(this);
+            }
+        }
 
         private void OnConfigChanged(string key, object? value)
         {
@@ -177,27 +177,29 @@ public virtual void Setup(SimplePointOfInterest poi, CharacterMainControl charac
             }
         }
 
-protected virtual void Update()
-{
-    if (character != null && characterType != CharacterType.Main && PoiCommon.IsDead(character))
-    {
-        Destroy(gameObject);
-        return;
-    }
-    
-    // 检查位置是否有明显变化，如果有则通知缓存管理器
-    if (PoiCacheManager.Instance != null)
-    {
-        Vector3 currentPosition = transform.position;
-        float distanceMoved = Vector3.Distance(currentPosition, _lastPosition);
-        
-        if (distanceMoved > POSITION_CHANGE_THRESHOLD)
+        protected virtual void Update()
         {
-            _lastPosition = currentPosition;
-            PoiCacheManager.Instance.ForceUpdateInstance(this); // 修改这里
+            if (character != null && characterType != CharacterType.Main && PoiCommon.IsDead(character))
+            {
+                Destroy(gameObject);
+                return;
+            }
+            
+            // 检查位置是否有明显变化，如果有则通知缓存管理器
+            // 注意：这个检查现在由PoiCacheManager的UpdateFromCharacter方法处理
+            // 这里保持简单的变化检测，避免过度计算
+            if (PoiCacheManager.Instance != null)
+            {
+                Vector3 currentPosition = transform.position;
+                float distanceMoved = Vector3.Distance(currentPosition, _lastPosition);
+                
+                if (distanceMoved > POSITION_CHANGE_THRESHOLD)
+                {
+                    _lastPosition = currentPosition;
+                    // 让缓存管理器自己检测变化，不在这里强制更新
+                }
+            }
         }
-    }
-}
 
         protected void OnDestroy()
         {

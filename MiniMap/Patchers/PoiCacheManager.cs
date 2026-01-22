@@ -45,10 +45,17 @@ namespace MiniMap.Managers
 
         private class PoiInstanceData
         {
+            // 核心引用：这个POI对应的游戏对象和角色
             public MonoBehaviour PoiInstance { get; set; }
             public IPointOfInterest IPoi { get; set; }
             public CharacterType CharacterType { get; set; }
             public CharacterMainControl? Character { get; set; }
+            
+            // 缓存上一次的数据，用于变化检测
+            private Vector3 _lastPosition;
+            private Vector3 _lastForward;
+            private Color _lastColor;
+            private bool _forceUpdateNextTime = false;
             
             // 位置数据
             public Vector3 WorldPosition { get; set; }
@@ -71,6 +78,12 @@ namespace MiniMap.Managers
             public bool IsActiveByGame { get; set; } = true;
             public bool IsAlive { get; set; } = true;
             
+            // 从CharacterMainControl直接获取的状态（这个POI自己的角色状态）
+            public bool IsMoving { get; private set; }
+            public bool IsRunning { get; private set; }
+            public bool IsOnGround { get; private set; }
+            public float CurrentSpeed { get; private set; }
+            
             // 视觉注意力级别
             public string CurrentRange { get; set; } = "未知";
             public float CurrentUpdateInterval { get; set; } = 0.5f;
@@ -79,10 +92,16 @@ namespace MiniMap.Managers
             public float LastWorldUpdateTime { get; set; }
             public float LastMapUpdateTime { get; set; }
             public float LastDistanceCheckTime { get; set; }
+            public float LastPropertyCheckTime { get; set; }
             
             // 异步任务控制
             public CancellationTokenSource? UpdateTaskCts { get; set; }
             public bool IsUpdating { get; set; } = false;
+            
+            // 变化检测标志
+            public bool PositionChanged { get; private set; }
+            public bool RotationChanged { get; private set; }
+            public bool ColorChanged { get; private set; }
             
             // 实例ID
             public string InstanceId { get; set; }
@@ -90,6 +109,132 @@ namespace MiniMap.Managers
             // 性能统计
             public int UpdateCount { get; set; }
             public float TotalUpdateTime { get; set; }
+            
+            // ========== 核心优化方法：从自己的CharacterMainControl获取数据 ==========
+            public void UpdateFromOwnCharacter()
+            {
+                if (Character == null) 
+                {
+                    IsActiveByGame = false;
+                    return;
+                }
+                
+                try
+                {
+                    // 检查角色是否有效
+                    if (!Character.gameObject.activeInHierarchy || (Character.Health != null && Character.Health.IsDead))
+                    {
+                        IsActiveByGame = false;
+                        return;
+                    }
+                    
+                    IsActiveByGame = true;
+                    
+                    // 获取这个POI自己的角色组件
+                    var myCharacter = Character;
+                    var transform = myCharacter.transform;
+                    var movement = myCharacter.movementControl;
+                    
+                    // ========== 1. 位置更新（总是更新，但检测变化） ==========
+                    Vector3 currentPos = transform.position;
+                    
+                    // 计算与上一次的位置变化（使用平方距离提高性能）
+                    float sqrDistance = (currentPos - _lastPosition).sqrMagnitude;
+                    
+                    // 关键：降低变化阈值，确保靠近时能检测到
+                    bool positionChanged = sqrDistance > 0.001f || _forceUpdateNextTime;
+                    
+                    if (positionChanged)
+                    {
+                        WorldPosition = currentPos;
+                        _lastPosition = currentPos;
+                        PositionChanged = true;
+                        LastWorldUpdateTime = Time.time;
+                    }
+                    
+                    // ========== 2. 朝向更新 ==========
+                    Vector3 currentForward = myCharacter.modelRoot.forward;
+                    
+                    // 降低角度变化阈值
+                    bool rotationChanged = Vector3.Angle(currentForward, _lastForward) > 0.5f || _forceUpdateNextTime;
+                    
+                    if (rotationChanged)
+                    {
+                        ForwardDirection = currentForward;
+                        _lastForward = currentForward;
+                        RotationChanged = true;
+                        
+                        // 目标方向
+                        if (movement != null)
+                        {
+                            TargetAimDirection = movement.targetAimDirection;
+                        }
+                        
+                        // BOSS旋转
+                        if (CharacterType == CharacterType.Boss)
+                        {
+                            Rotation = myCharacter.modelRoot.rotation;
+                        }
+                    }
+                    
+                    // ========== 3. 状态更新（总是更新，无需变化检测） ==========
+                    if (movement != null)
+                    {
+                        IsMoving = movement.Moving;
+                        IsRunning = myCharacter.Running;
+                        IsOnGround = myCharacter.IsOnGround;
+                        CurrentSpeed = myCharacter.Velocity.magnitude;
+                    }
+                    
+                    // ========== 4. 颜色更新 ==========
+                    if (IPoi != null)
+                    {
+                        Color currentColor = IPoi.Color;
+                        if (currentColor != _lastColor || _forceUpdateNextTime)
+                        {
+                            Color = currentColor;
+                            _lastColor = currentColor;
+                            ColorChanged = true;
+                        }
+                    }
+                    
+                    // 重置强制更新标志
+                    _forceUpdateNextTime = false;
+                }
+                catch (Exception e)
+                {
+                    ModBehaviour.Logger.LogError($"UpdateFromOwnCharacter错误 [{InstanceId}]: {e.Message}");
+                    IsActiveByGame = false;
+                }
+            }
+            
+            // 重置变化标志
+            public void ResetChangeFlags()
+            {
+                PositionChanged = false;
+                RotationChanged = false;
+                ColorChanged = false;
+            }
+            
+            // 强制下次更新
+            public void ForceUpdateNextTime()
+            {
+                _forceUpdateNextTime = true;
+            }
+            
+            // 初始化缓存
+            public void InitializeCache()
+            {
+                if (Character != null)
+                {
+                    _lastPosition = Character.transform.position;
+                    _lastForward = Character.modelRoot.forward;
+                }
+                if (IPoi != null)
+                {
+                    _lastColor = IPoi.Color;
+                }
+            }
         }
 
         // 按实例存储数据
@@ -102,16 +247,19 @@ namespace MiniMap.Managers
         private CancellationTokenSource? _globalCts;
         
         // 配置
-        private const float DISTANCE_CHECK_INTERVAL = 1.0f;  // 距离检查频率（从0.5秒改为1秒）
+        private const float DISTANCE_CHECK_INTERVAL = 1.0f;  // 距离检查频率
         
         private CharacterMainControl? _player;
         private MiniMapDisplay? _activeMapDisplay;
         private string? _currentSceneId;
         private Vector3 _playerPos;
+        private float _lastGlobalDistanceCheckTime;
         
         // 性能统计
         private float _lastStatLogTime;
         private int _totalUpdatesThisFrame;
+        private int _totalUpdatesLastSecond;
+        private float _lastSecondUpdateTime;
         private StringBuilder _statsBuilder = new StringBuilder(256);
 
         private void Awake()
@@ -223,6 +371,8 @@ namespace MiniMap.Managers
                 InstanceId = $"{charType}_{poiInstance.GetInstanceID()}",
                 LastWorldUpdateTime = Time.time,
                 LastDistanceCheckTime = Time.time,
+                LastPropertyCheckTime = Time.time,
+                LastMapUpdateTime = 0f, // 初始化为0，强制第一次更新
                 Color = ipoi.Color,
                 DisplayName = ipoi.DisplayName,
                 HideIcon = ipoi.HideIcon,
@@ -233,7 +383,11 @@ namespace MiniMap.Managers
                 CurrentRange = "未计算"
             };
 
-            UpdateWorldPosition(instanceData);
+            // 初始化缓存
+            instanceData.InitializeCache();
+            
+            // 强制第一次更新
+            instanceData.ForceUpdateNextTime();
             
             _instanceData[poiInstance] = instanceData;
             
@@ -290,7 +444,15 @@ namespace MiniMap.Managers
                     await UniTask.Delay(TimeSpan.FromSeconds(DISTANCE_CHECK_INTERVAL), cancellationToken: token);
                     
                     UpdateGlobalState();
-                    ManageAllInstances();
+                    ManageAllInstancesOptimized();
+                    
+                    // 每秒更新统计
+                    if (Time.time - _lastSecondUpdateTime >= 1f)
+                    {
+                        _totalUpdatesLastSecond = _totalUpdatesThisFrame;
+                        _totalUpdatesThisFrame = 0;
+                        _lastSecondUpdateTime = Time.time;
+                    }
                     
                     if (Time.time - _lastStatLogTime > 5f)
                     {
@@ -336,11 +498,18 @@ namespace MiniMap.Managers
             }
         }
 
-        private void ManageAllInstances()
+        private void ManageAllInstancesOptimized()
         {
             if (_player == null || string.IsNullOrEmpty(_currentSceneId)) return;
 
             var instancesToRemove = new List<MonoBehaviour>();
+            float currentTime = Time.time;
+            bool shouldCheckDistance = currentTime - _lastGlobalDistanceCheckTime > 0.5f;
+            
+            if (shouldCheckDistance)
+            {
+                _lastGlobalDistanceCheckTime = currentTime;
+            }
             
             foreach (var kvp in _instanceData)
             {
@@ -353,13 +522,10 @@ namespace MiniMap.Managers
                     continue;
                 }
                 
-                bool wasActiveByGame = data.IsActiveByGame;
-                data.IsActiveByGame = data.Character != null && data.Character.gameObject.activeInHierarchy;
+                // 1. 从这个POI自己的CharacterMainControl获取数据并检测变化
+                data.UpdateFromOwnCharacter();
                 
-                if (data.IsActiveByGame != wasActiveByGame)
-                {
-                    OnGameActivationChanged(data, data.IsActiveByGame);
-                }
+                // 2. 更新游戏激活状态（已经在UpdateFromOwnCharacter中更新了）
                 
                 if (!data.IsActiveByGame)
                 {
@@ -370,12 +536,15 @@ namespace MiniMap.Managers
                     continue;
                 }
                 
-                UpdateWorldPosition(data);
-                
-                if (data.Character != null)
+                // 3. 距离计算优化：降低频率（计算这个POI到玩家的距离）
+                if (shouldCheckDistance)
                 {
+                    // 计算这个POI角色位置到玩家位置的距离
                     float distance = Vector3.Distance(data.WorldPosition, _playerPos);
+                    
+                    // 总是更新距离，确保数据准确
                     data.DistanceToPlayer = distance;
+                    data.LastDistanceCheckTime = currentTime;
                     
                     string newRange = VisualAttentionStrategy.GetRangeName(distance);
                     float newInterval = VisualAttentionStrategy.GetUpdateInterval(distance);
@@ -386,17 +555,25 @@ namespace MiniMap.Managers
                         data.CurrentRange = newRange;
                         data.CurrentUpdateInterval = newInterval;
                     }
-                    
-                    ManageUpdateTask(data, distance);
-                    
+                }
+                
+                // 4. 其他POI属性（这些很少变化，降低更新频率）
+                if (currentTime - data.LastPropertyCheckTime > 2f)
+                {
                     if (data.IPoi != null)
                     {
-                        data.Color = data.IPoi.Color;
                         data.DisplayName = data.IPoi.DisplayName;
                         data.HideIcon = data.IPoi.HideIcon;
                         data.ScaleFactor = data.IPoi.ScaleFactor;
                     }
+                    data.LastPropertyCheckTime = currentTime;
                 }
+                
+                // 5. 管理更新任务
+                ManageUpdateTask(data, data.DistanceToPlayer);
+                
+                // 6. 重置变化标志
+                data.ResetChangeFlags();
             }
             
             foreach (var instance in instancesToRemove)
@@ -457,7 +634,7 @@ namespace MiniMap.Managers
             data.UpdateTaskCts = new CancellationTokenSource();
             data.IsUpdating = true;
             
-            StartVisualAttentionUpdateLoop(data, data.UpdateTaskCts.Token).Forget();
+            StartVisualAttentionUpdateLoopOptimized(data, data.UpdateTaskCts.Token).Forget();
         }
 
         private void StopInstanceUpdateTask(PoiInstanceData data)
@@ -470,15 +647,17 @@ namespace MiniMap.Managers
             }
         }
 
-        private async UniTaskVoid StartVisualAttentionUpdateLoop(PoiInstanceData data, CancellationToken token)
+        private async UniTaskVoid StartVisualAttentionUpdateLoopOptimized(PoiInstanceData data, CancellationToken token)
         {
             try
             {
                 float lastUpdateTime = Time.time;
+                int consecutiveNoChangeCount = 0;
+                int consecutivePositionNoChangeCount = 0;
                 
                 while (!token.IsCancellationRequested && data.IsAlive)
                 {
-                    // 每次循环都检查游戏状态
+                    // 检查这个POI对应的角色是否有效
                     if (data.Character == null || !data.Character.gameObject.activeInHierarchy)
                     {
                         data.IsActiveByGame = false;
@@ -486,19 +665,60 @@ namespace MiniMap.Managers
                     }
                     
                     float currentTime = Time.time;
+                    float timeSinceLastUpdate = currentTime - lastUpdateTime;
                     
-                    if (currentTime - lastUpdateTime >= data.CurrentUpdateInterval)
+                    // 关键：使用CurrentUpdateInterval，但确保不会太久不更新
+                    float updateInterval = Mathf.Max(data.CurrentUpdateInterval, 0.1f); // 最小0.1秒
+                    
+                    if (timeSinceLastUpdate >= updateInterval)
                     {
-                        UpdatePoiBasedOnDistance(data);
-                        lastUpdateTime = currentTime;
+                        // 1. 强制每隔几次更新一次，避免漏掉变化
+                        if (consecutivePositionNoChangeCount >= 10) // 连续10次位置没变化
+                        {
+                            data.ForceUpdateNextTime();
+                            consecutivePositionNoChangeCount = 0;
+                        }
+                        
+                        // 2. 从这个POI自己的Character获取数据
+                        data.UpdateFromOwnCharacter();
+                        
+                        // 3. 如果角色不活跃，停止更新
+                        if (!data.IsActiveByGame)
+                        {
+                            break;
+                        }
+                        
+                        // 4. 根据距离和变化情况更新地图位置
+                        UpdatePoiBasedOnDistanceOptimized(data);
+                        
+                        // 5. 统计位置变化情况
+                        if (data.PositionChanged)
+                        {
+                            consecutivePositionNoChangeCount = 0;
+                        }
+                        else
+                        {
+                            consecutivePositionNoChangeCount++;
+                            
+                            // 即使位置没变化，也要定期更新地图位置（防止卡住）
+                            if (Time.time - data.LastMapUpdateTime > 10f) // 最多10秒更新一次
+                            {
+                                UpdateMapPosition(data);
+                            }
+                        }
+                        
+                        // 6. 统计和计数
                         data.UpdateCount++;
-                        data.TotalUpdateTime += data.CurrentUpdateInterval;
                         _totalUpdatesThisFrame++;
+                        
+                        // 7. 重置变化标志
+                        data.ResetChangeFlags();
+                        
+                        lastUpdateTime = currentTime;
                     }
                     
-                    await UniTask.Delay(
-                        (int)(data.CurrentUpdateInterval * 1000), 
-                        cancellationToken: token);
+                    // 等待下一个更新周期
+                    await UniTask.Delay((int)(updateInterval * 1000), cancellationToken: token);
                 }
             }
             catch (OperationCanceledException)
@@ -515,80 +735,32 @@ namespace MiniMap.Managers
             }
         }
 
-        private void UpdatePoiBasedOnDistance(PoiInstanceData data)
+        private void UpdatePoiBasedOnDistanceOptimized(PoiInstanceData data)
         {
-            if (data.Character == null) return;
-            
             float distance = data.DistanceToPlayer;
             
+            // 关键：根据距离和变化情况决定更新什么
             if (distance <= VisualAttentionStrategy.CLOSE_RANGE)
             {
-                UpdateBasicPoiData(data);
+                // 近距离（0-25米）：总是更新地图位置
+                UpdateMapPosition(data);
             }
             else if (distance <= VisualAttentionStrategy.OPTIMAL_RANGE)
             {
-                UpdateDetailedPoiData(data);
+                // 中距离（25-40米）：位置变化或定期更新
+                if (data.PositionChanged || Time.time - data.LastMapUpdateTime > 1.0f)
+                {
+                    UpdateMapPosition(data);
+                }
             }
             else if (distance <= VisualAttentionStrategy.MAX_TRACK_RANGE)
             {
-                UpdateSimplifiedPoiData(data);
-            }
-        }
-
-        private void UpdateBasicPoiData(PoiInstanceData data)
-        {
-            UpdateWorldPosition(data);
-            
-            if (data.Character.movementControl.Moving)
-            {
-                data.ForwardDirection = data.Character.modelRoot.forward;
-                data.TargetAimDirection = data.Character.movementControl.targetAimDirection;
-                UpdateBossRotation(data);
-            }
-            
-            if (_activeMapDisplay != null && !string.IsNullOrEmpty(_currentSceneId))
-            {
-                UpdateMapPosition(data);
-            }
-        }
-
-        private void UpdateDetailedPoiData(PoiInstanceData data)
-        {
-            UpdateWorldPosition(data);
-            data.ForwardDirection = data.Character.modelRoot.forward;
-            data.TargetAimDirection = data.Character.movementControl.targetAimDirection;
-            UpdateBossRotation(data);
-            
-            if (_activeMapDisplay != null && !string.IsNullOrEmpty(_currentSceneId))
-            {
-                UpdateMapPosition(data);
-            }
-            
-            data.Color = data.IPoi?.Color ?? Color.white;
-        }
-
-        private void UpdateSimplifiedPoiData(PoiInstanceData data)
-        {
-            UpdateWorldPosition(data);
-            
-            if (data.UpdateCount % 3 == 0)
-            {
-                data.ForwardDirection = data.Character.modelRoot.forward;
-                UpdateBossRotation(data);
-            }
-            
-            if (data.UpdateCount % 2 == 0 && _activeMapDisplay != null && !string.IsNullOrEmpty(_currentSceneId))
-            {
-                UpdateMapPosition(data);
-            }
-        }
-
-        private void UpdateWorldPosition(PoiInstanceData data)
-        {
-            if (data.Character != null)
-            {
-                data.WorldPosition = data.Character.transform.position;
-                data.LastWorldUpdateTime = Time.time;
+                // 远距离（40-100米）：降低更新频率
+                if ((data.UpdateCount % 2 == 0 && data.PositionChanged) || 
+                    Time.time - data.LastMapUpdateTime > 3.0f)
+                {
+                    UpdateMapPosition(data);
+                }
             }
         }
 
@@ -603,6 +775,12 @@ namespace MiniMap.Managers
                         data.CachedMapPosition = mapPos;
                         data.HasValidMapPosition = true;
                         data.LastMapUpdateTime = Time.time;
+                        
+                        // 调试：记录近距离更新
+                        if (data.DistanceToPlayer <= VisualAttentionStrategy.CLOSE_RANGE)
+                        {
+                            ModBehaviour.Logger.Log($"近距离更新地图位置 [{data.InstanceId}]: 距离={data.DistanceToPlayer:F1}m");
+                        }
                     }
                     else
                     {
@@ -613,15 +791,7 @@ namespace MiniMap.Managers
             catch (Exception e)
             {
                 data.HasValidMapPosition = false;
-            }
-        }
-
-        private void UpdateBossRotation(PoiInstanceData data)
-        {
-            if (data.CharacterType == CharacterType.Boss && data.Character != null)
-            {
-                Vector3 forward = data.Character.movementControl.targetAimDirection;
-                data.Rotation = MiniMapCommon.GetChracterRotation(forward);
+                ModBehaviour.Logger.LogError($"更新地图位置失败 [{data.InstanceId}]: {e.Message}");
             }
         }
 
@@ -666,9 +836,11 @@ namespace MiniMap.Managers
         {
             if (_instanceData.TryGetValue(poiInstance, out var data))
             {
-                UpdateWorldPosition(data);
-                data.HasValidMapPosition = false;
+                // 强制更新所有数据
+                data.ForceUpdateNextTime();
+                data.UpdateFromOwnCharacter();
                 UpdateMapPosition(data);
+                ModBehaviour.Logger.Log($"强制更新POI: {data.InstanceId}");
             }
         }
 
@@ -679,38 +851,106 @@ namespace MiniMap.Managers
             ModBehaviour.Logger.Log("清空所有POI实例");
         }
 
+        // ========== 调试方法 ==========
+        
+        public void DebugPoiStatus(MonoBehaviour poiInstance)
+        {
+            if (_instanceData.TryGetValue(poiInstance, out var data))
+            {
+                StringBuilder sb = new StringBuilder();
+                sb.AppendLine($"=== POI调试信息 [{data.InstanceId}] ===");
+                sb.AppendLine($"角色: {data.Character?.name ?? "null"}");
+                sb.AppendLine($"类型: {data.CharacterType}");
+                sb.AppendLine($"活跃: {data.IsActiveByGame}");
+                sb.AppendLine($"正在更新: {data.IsUpdating}");
+                sb.AppendLine($"位置: {data.WorldPosition}");
+                sb.AppendLine($"距离玩家: {data.DistanceToPlayer:F1}m");
+                sb.AppendLine($"上次地图更新: {Time.time - data.LastMapUpdateTime:F1}秒前");
+                sb.AppendLine($"上次世界更新: {Time.time - data.LastWorldUpdateTime:F1}秒前");
+                sb.AppendLine($"更新间隔: {data.CurrentUpdateInterval:F2}s");
+                sb.AppendLine($"更新次数: {data.UpdateCount}");
+                sb.AppendLine($"移动状态: {data.IsMoving}");
+                sb.AppendLine($"奔跑状态: {data.IsRunning}");
+                sb.AppendLine($"有效地图位置: {data.HasValidMapPosition}");
+                sb.AppendLine($"地图位置: {data.CachedMapPosition}");
+                
+                ModBehaviour.Logger.Log(sb.ToString());
+            }
+            else
+            {
+                ModBehaviour.Logger.Log($"POI未注册: {poiInstance?.name ?? "null"}");
+            }
+        }
+
+        public void ForceRefreshAllPois()
+        {
+            foreach (var data in _instanceData.Values)
+            {
+                data.ForceUpdateNextTime();
+            }
+            ModBehaviour.Logger.Log($"强制刷新所有POI，共{_instanceData.Count}个");
+        }
+
+        public void LogAllPoiDistances()
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("=== 所有POI距离统计 ===");
+            
+            foreach (var data in _instanceData.Values)
+            {
+                if (data.IsActiveByGame)
+                {
+                    sb.AppendLine($"{data.InstanceId}: {data.DistanceToPlayer:F1}m - {data.CurrentRange} - 更新中:{data.IsUpdating}");
+                }
+            }
+            
+            ModBehaviour.Logger.Log(sb.ToString());
+        }
+
         private void LogPerformanceStats()
         {
             if (_activePois.Count == 0) return;
             
             int close = 0, optimal = 0, far = 0;
+            int updating = 0;
+            float totalUpdateInterval = 0f;
+            
             foreach (var data in _activePois.Values)
             {
                 float d = data.DistanceToPlayer;
                 if (d <= 25f) close++;
                 else if (d <= 40f) optimal++;
                 else far++;
+                
+                if (data.IsUpdating)
+                {
+                    updating++;
+                    totalUpdateInterval += data.CurrentUpdateInterval;
+                }
             }
             
+            float avgUpdateInterval = updating > 0 ? totalUpdateInterval / updating : 0f;
+            
             _statsBuilder.Clear();
-            _statsBuilder.Append("POI统计: ");
-            _statsBuilder.Append(_activePois.Count);
-            _statsBuilder.Append("活跃 [近:");
-            _statsBuilder.Append(close);
-            _statsBuilder.Append(" 中:");
-            _statsBuilder.Append(optimal);
-            _statsBuilder.Append(" 远:");
-            _statsBuilder.Append(far);
-            _statsBuilder.Append(']');
+            _statsBuilder.AppendLine("=== POI性能统计 ===");
+            _statsBuilder.Append("活跃实例: ").Append(_activePois.Count)
+                        .Append(" [近:").Append(close)
+                        .Append(" 中:").Append(optimal)
+                        .Append(" 远:").Append(far).AppendLine("]");
+            _statsBuilder.Append("正在更新: ").Append(updating)
+                        .Append(" 平均间隔:").Append(avgUpdateInterval.ToString("F2")).Append("s")
+                        .Append(" 更新频率:").Append(_totalUpdatesLastSecond).AppendLine("/秒");
+            _statsBuilder.Append("总实例数: ").Append(_instanceData.Count);
             
             ModBehaviour.Logger.Log(_statsBuilder.ToString());
-            _totalUpdatesThisFrame = 0;
         }
 
         public void LogInstanceStats()
         {
             int total = _instanceData.Count;
             int active = _activePois.Count;
+            int updating = 0;
+            float totalUpdateInterval = 0f;
             
             int enemies = 0, bosses = 0, npcs = 0, players = 0;
 
@@ -723,10 +963,24 @@ namespace MiniMap.Managers
                     case CharacterType.NPC: npcs++; break;
                     case CharacterType.Main: players++; break;
                 }
+                
+                if (data.IsUpdating)
+                {
+                    updating++;
+                    totalUpdateInterval += data.CurrentUpdateInterval;
+                }
             }
 
-            ModBehaviour.Logger.Log($"POI实例: 总数={total}, 活跃={active}");
-            ModBehaviour.Logger.Log($"类型: 敌人={enemies}, BOSS={bosses}, NPC={npcs}, 玩家={players}");
+            float avgUpdateInterval = updating > 0 ? totalUpdateInterval / updating : 0f;
+            
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("=== POI详细统计 ===");
+            sb.AppendLine($"实例总数: {total}, 活跃: {active}, 正在更新: {updating}");
+            sb.AppendLine($"类型分布: 敌人={enemies}, BOSS={bosses}, NPC={npcs}, 玩家={players}");
+            sb.AppendLine($"平均更新间隔: {avgUpdateInterval:F2}s");
+            sb.AppendLine($"当前更新频率: {_totalUpdatesLastSecond}/秒");
+            
+            ModBehaviour.Logger.Log(sb.ToString());
         }
     }
 }
