@@ -416,6 +416,11 @@ namespace MiniMap.Managers
             return options.Count > 0 ? options[index] : string.Empty;
         }
 
+		public static void OnLoadingCreateUI(SceneLoadingContext context)
+		{
+			if (needUpdate) CreateUI();
+		}
+		
         public static void Update()
         {
             if (!needUpdate)

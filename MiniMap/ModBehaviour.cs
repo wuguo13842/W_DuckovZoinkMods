@@ -129,6 +129,10 @@ namespace MiniMap
                 LevelManager.OnEvacuated += OnEvacuated;
                 //SceneLoader.onFinishedLoadingScene += PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized += PoiManager.OnLenvelIntialized;
+				SceneLoader.onStartedLoadingScene += ModSettingManager.OnLoadingCreateUI;  // 场景加载流程开始时，在显示加载界面之前
+				//SceneLoader.onFinishedLoadingScene += OnSceneLoadingFinished;  // 场景已经加载完成（资源加载完毕），但还没有被设置为活动场景之前
+				//SceneLoader.onBeforeSetSceneActive += OnBeforeSetSceneActive;  // 新场景已经被设置为活动场景，初始化完成后
+				//SceneLoader.onAfterSceneInitialize += OnAfterSceneInitialize;  // 整个场景加载流程完全结束，包括所有过渡动画完成后
 
             }
             catch (Exception e)
@@ -151,6 +155,7 @@ namespace MiniMap
                 LevelManager.OnEvacuated -= OnEvacuated;
                 //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
+				SceneLoader.onStartedLoadingScene -= ModSettingManager.OnLoadingCreateUI;
                 CustomMinimapManager.Destroy();
                 Logger.Log($"disable mod {MOD_NAME}");
             }
@@ -181,8 +186,7 @@ namespace MiniMap
         {
             try
             {
-                if (ModSettingManager.needUpdate)
-                    ModSettingManager.Update();
+                // if (ModSettingManager.needUpdate)  ModSettingManager.Update();
                 CustomMinimapManager.Update();
                 CustomMinimapManager.CheckToggleKey();
                 //PoiManager.Update();
