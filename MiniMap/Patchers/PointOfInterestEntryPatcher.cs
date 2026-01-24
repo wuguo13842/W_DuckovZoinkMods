@@ -21,36 +21,87 @@ namespace MiniMap.Patchers
         public static new PatcherBase Instance { get; } = new PointOfInterestEntryPatcher();
         private PointOfInterestEntryPatcher() { }
 
-        [MethodPatcher("UpdateScale", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        public static bool UpdateScalePrefix(
-            CharacterPoiEntry __instance,
-            MiniMapDisplay ___master,
-            IPointOfInterest ___pointOfInterest,
-            Transform ___iconContainer,
-            ProceduralImage ___areaDisplay,
-            float ___areaLineThickness
-        )
+[MethodPatcher("UpdateScale", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
+public static bool UpdateScalePrefix(
+    CharacterPoiEntry __instance,
+    MiniMapDisplay ___master,
+    IPointOfInterest ___pointOfInterest,
+    Transform ___iconContainer,
+    ProceduralImage ___areaDisplay,
+    float ___areaLineThickness
+)
+{
+    try
+    {
+        float d = ___pointOfInterest?.ScaleFactor ?? 1f;
+        
+        // 如果是CharacterPoiBase（包括位置图标和方向箭头）
+        if (___pointOfInterest is CharacterPoiBase characterPoi)
         {
-            float d = ___pointOfInterest?.ScaleFactor ?? 1f;
-            float parentLocalScale = __instance.GetProperty<float>("ParentLocalScale");
-            int iconScaleType = ModSettingManager.GetValue("iconScaleType", 0);
-            var baseScale = Vector3.one * d / parentLocalScale;
-            ___iconContainer.localScale = ___master != CustomMinimapManager.DuplicatedMinimapDisplay ?
-                baseScale :
-                iconScaleType switch
-                {
-                    1 => baseScale * ModSettingManager.GetValue("miniMapWindowScale", 1f) / 1.5f,
-                    2 => baseScale * ModSettingManager.GetValue("displayZoomScale", 5f) / 5,
-                    _ or 0 => baseScale,
-                };
-            if (___pointOfInterest != null && ___pointOfInterest.IsArea)
+            // 判断当前显示的是系统地图还是Mod地图
+            bool isInMiniMap = ___master == CustomMinimapManager.DuplicatedMinimapDisplay;
+            
+            // 判断是否是中心图标（玩家自己的图标）
+            bool isCenterIcon = characterPoi.CharacterType == CharacterType.Main;
+            
+            if (isCenterIcon)
             {
-                ___areaDisplay.BorderWidth = ___areaLineThickness / parentLocalScale;
-                ___areaDisplay.FalloffDistance = 1f / parentLocalScale;
+                // 中心图标：区分小地图和系统地图
+                if (isInMiniMap)
+                {
+                    // 在小地图中：直接读取 miniMapCenterIconSize 配置
+                    d = characterPoi.ScaleFactor * ModSettingManager.GetValue("miniMapCenterIconSize", 1.0f);
+                }
+                else
+                {
+                    // 在系统地图中：使用原始大小
+                    d = characterPoi.ScaleFactor;
+                }
             }
-
-            return false;
+            else
+            {
+                // 根据角色类型获取对应的图标大小配置
+                float iconSizeFactor = 1.0f;
+                switch (characterPoi.CharacterType)
+                {
+                    case CharacterType.Pet:
+                        iconSizeFactor = ModSettingManager.GetValue("petIconSize", 0.8f);
+                        break;
+                    case CharacterType.Boss:
+                        iconSizeFactor = ModSettingManager.GetValue("bossIconSize", 1.2f);
+                        break;
+                    case CharacterType.Enemy:
+                    case CharacterType.NPC:
+                    case CharacterType.Neutral:
+                        iconSizeFactor = ModSettingManager.GetValue("enemyIconSize", 1.0f);
+                        break;
+                }
+                
+                d = characterPoi.ScaleFactor * iconSizeFactor;
+            }
         }
+        
+        float parentLocalScale = __instance.GetProperty<float>("ParentLocalScale");
+        int iconScaleType = ModSettingManager.GetValue("iconScaleType", 0);
+        var baseScale = Vector3.one * d / parentLocalScale;
+        
+        // 应用缩放
+        ___iconContainer.localScale = baseScale;
+        
+        if (___pointOfInterest != null && ___pointOfInterest.IsArea)
+        {
+            ___areaDisplay.BorderWidth = ___areaLineThickness / parentLocalScale;
+            ___areaDisplay.FalloffDistance = 1f / parentLocalScale;
+        }
+
+        return false;
+    }
+    catch (Exception e)
+    {
+        ModBehaviour.Logger.LogError($"UpdateScalePrefix failed: {e.Message}");
+        return true;
+    }
+}
 
         [MethodPatcher("UpdateRotation", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static bool UpdateRotationPrefix(CharacterPoiEntry __instance, MiniMapDisplayEntry ___minimapEntry)
