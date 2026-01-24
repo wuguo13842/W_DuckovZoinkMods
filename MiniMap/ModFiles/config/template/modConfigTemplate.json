@@ -143,11 +143,11 @@
             "descCN": "快捷键",
             "descEN": "Hot Keys",
             "configs": {
-                "miniMapToggleKey": {
+                "MiniMapToggleKey": {
                     "type": "keyBinding",
                     "descCN": "小地图开关快捷键",
                     "descEN": "Toggle Mini Map Hot Key",
-                    "default": "Alpha9"
+                    "default": "Digit9"
                 },
                 "MiniMapZoomInKey": {
                     "type": "keyBinding",

@@ -188,7 +188,7 @@ namespace MiniMap
             {
                 // if (ModSettingManager.needUpdate)  ModSettingManager.Update();
                 CustomMinimapManager.Update();
-                CustomMinimapManager.CheckToggleKey();
+                // CustomMinimapManager.CheckToggleKey();
                 //PoiManager.Update();
             }
             catch (Exception e)

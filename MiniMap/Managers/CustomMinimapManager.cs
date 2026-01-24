@@ -14,9 +14,12 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UI.ProceduralImage;
+using UnityEngine.InputSystem;
+using System.Threading;
 using ZoinkModdingLibrary.GameUI;
 using ZoinkModdingLibrary.Patcher;
 using ZoinkModdingLibrary.Utils;
+using UnityEngine.InputSystem;
 
 namespace MiniMap.Managers
 {
@@ -74,6 +77,7 @@ namespace MiniMap.Managers
                 return;
             }
             CreateMiniMapContainer();
+            InitializeInputSystem();
             ModSettingManager.ConfigLoaded += OnConfigLoaded;
             ModSettingManager.ConfigChanged += OnConfigChanged;
             ModSettingManager.ButtonClicked += OnButtonClicked;
@@ -86,6 +90,7 @@ namespace MiniMap.Managers
         {
             ModBehaviour.Logger.Log($"正在销毁小地图容器");
             GameObject.Destroy(miniMapContainer);
+            CleanupInputSystem();
             ModSettingManager.ConfigLoaded -= OnConfigLoaded;
             ModSettingManager.ConfigChanged -= OnConfigChanged;
             ModSettingManager.ButtonClicked -= OnButtonClicked;
@@ -110,6 +115,11 @@ namespace MiniMap.Managers
                 case "miniMapPositionY":
                     OnMinimapPositionChanged();
                     break;
+                case "MiniMapToggleKey":
+                case "MiniMapZoomInKey":
+                case "MiniMapZoomOutKey":
+                    UpdateInputBindings();
+                    break;
             }
         }
 
@@ -118,6 +128,7 @@ namespace MiniMap.Managers
             OnEnabledChanged();
             OnMinimapPositionChanged();
             OnMinimapContainerScaleChanged();
+            UpdateInputBindings();
         }
 
         private static void OnButtonClicked(string key)
@@ -127,27 +138,6 @@ namespace MiniMap.Managers
                 case "resetAllButton":
                     ModSettingManager.ResetAllConfigs();
                     break;
-            }
-        }
-
-        public static void CheckToggleKey()
-        {
-            try
-            {
-                if (!(isEnabled && duplicatedMinimapObject != null))
-                    return;
-                if (Input.GetKeyDown(ModSettingManager.GetValue<KeyCode>("miniMapToggleKey")))
-                {
-                    if (customCanvas != null)
-                    {
-                        isToggled = !isToggled;
-                        customCanvas.SetActive(isToggled);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                ModBehaviour.Logger.LogError($"检查临时开关时发生错误: {e.Message}");
             }
         }
 
@@ -456,17 +446,6 @@ namespace MiniMap.Managers
                     return;
                 }
 
-                KeyCode MiniMapZoomInKey = ModSettingManager.GetValue<KeyCode>("MiniMapZoomInKey");
-                KeyCode MiniMapZoomOutKey = ModSettingManager.GetValue<KeyCode>("MiniMapZoomOutKey");
-
-                if (Input.GetKeyDown(MiniMapZoomOutKey))
-                {
-                    DisplayZoom(-1);
-                }
-                else if (Input.GetKeyDown(MiniMapZoomInKey))
-                {
-                    DisplayZoom(1);
-                }
                 UpdateMiniMapRotation();
                 UpdateMiniMapPosition();
             }
@@ -835,5 +814,247 @@ namespace MiniMap.Managers
                 ModBehaviour.Logger.LogError($"更新小地图移动时发生错误: {e.Message}");
             }
         }
+        
+        // ==================== 新增的 Input System 方法 ====================
+		
+        
+        // 新增的 Input System 相关字段
+		private static Key _zoomInKey = ModSettingManager.GetValue<Key>("MiniMapZoomInKey");
+		private static Key _zoomOutKey = ModSettingManager.GetValue<Key>("MiniMapZoomOutKey");
+		private static InputAction? _toggleAction;       // 切换小地图显示/隐藏的按键动作
+		private static InputAction? _zoomInAction;       // 放大按键动作
+		private static InputAction? _zoomOutAction;      // 缩小按键动作
+		private static bool _isKeyLook  = false;         // 通用按键锁
+
+		// UniTask 取消令牌源：用于控制异步任务的取消
+		private static CancellationTokenSource? _zoomInCTS;   // 放大按键的异步任务取消令牌
+		private static CancellationTokenSource? _zoomOutCTS;  // 缩小按键的异步任务取消令牌
+
+		/// <summary>
+		/// 初始化 Input System，创建三个按键动作并绑定事件
+		/// 切换键：使用 performed 事件（按下时触发一次）
+		/// 缩放键：使用 started（按下开始）和 canceled（释放）事件实现长按检测
+		/// </summary>
+		private static void InitializeInputSystem()
+		{
+			try
+			{
+				Key _toggleKey = ModSettingManager.GetValue<Key>("MiniMapToggleKey");
+				// Key _toggleKey = Key.Digit9;
+				// Key _zoomInKey = Key.Equals;
+				// Key _zoomOutKey = Key.Minus;
+
+				// 切换小地图按键：默认 M 键
+				string ToggleKey = Keyboard.current[_toggleKey].path;
+				_toggleAction = new InputAction("ToggleMiniMap", InputActionType.Button, ToggleKey);
+				_toggleAction.performed += OnTogglePerformed;  // 按下时触发一次
+				_toggleAction.Enable();
+				
+				// 放大按键：默认 = 键
+				string ZoomInKey = Keyboard.current[_zoomInKey].path;
+				_zoomInAction = new InputAction("ZoomInMiniMap", InputActionType.Button, ZoomInKey);
+				_zoomInAction.started += OnZoomInStarted;      // 按键按下开始
+				_zoomInAction.canceled += OnZoomInCanceled;   // 按键释放
+				_zoomInAction.Enable();
+				
+				// 缩小按键：默认 - 键
+				string ZoomOutKey = Keyboard.current[_zoomOutKey].path;
+				_zoomOutAction = new InputAction("ZoomOutMiniMap", InputActionType.Button, ZoomOutKey);
+				_zoomOutAction.started += OnZoomOutStarted;    // 按键按下开始
+				_zoomOutAction.canceled += OnZoomOutCanceled; // 按键释放
+				_zoomOutAction.Enable();
+			}
+			catch (Exception e)
+			{
+				ModBehaviour.Logger.LogError($"初始化 Input System 失败: {e.Message}");
+			}
+		}
+
+		/// <summary>
+		/// 切换小地图显示/隐藏（按下切换键时触发）
+		/// 和原有的 CheckToggleKey() 功能相同，但使用 Input System 事件驱动
+		/// </summary>
+		private static void OnTogglePerformed(InputAction.CallbackContext context)
+		{
+			if (isEnabled && duplicatedMinimapObject != null)
+			{
+				isToggled = !isToggled;           // 反转显示状态
+				customCanvas?.SetActive(isToggled); // 显示/隐藏 Canvas
+			}
+		}
+
+		/// <summary>
+		/// 放大按键按下开始（Input System 的 started 事件）
+		/// 启动缩放控制：先取消之前的任务，再创建新任务
+		/// </summary>
+		private static void OnZoomInStarted(InputAction.CallbackContext context)
+		{
+			CancelZoomIn();  // 取消可能还在运行的放大任务
+			_zoomInCTS = new CancellationTokenSource();  // 创建新的取消令牌源
+			ZoomThrottleLoop(1, _zoomInCTS.Token, _zoomOutKey).Forget();  // 启动缩放控制任务（1 = 放大方向）
+		}
+
+		/// <summary>
+		/// 放大按键释放（Input System 的 canceled 事件）
+		/// 停止缩放控制
+		/// </summary>
+		private static void OnZoomInCanceled(InputAction.CallbackContext context)
+		{
+			CancelZoomIn();  // 取消放大任务
+		}
+
+		/// <summary>
+		/// 缩小按键按下开始
+		/// 启动缩放控制：先取消之前的任务，再创建新任务
+		/// </summary>
+		private static void OnZoomOutStarted(InputAction.CallbackContext context)
+		{
+			CancelZoomOut();  // 取消可能还在运行的缩小任务
+			_zoomOutCTS = new CancellationTokenSource();  // 创建新的取消令牌源
+			ZoomThrottleLoop(-1, _zoomOutCTS.Token, _zoomInKey).Forget();  // 启动缩放控制任务（-1 = 缩小方向）
+		}
+
+		/// <summary>
+		/// 缩小按键释放
+		/// 停止缩放控制
+		/// </summary>
+		private static void OnZoomOutCanceled(InputAction.CallbackContext context)
+		{
+			CancelZoomOut();  // 取消缩小任务
+		}
+
+		/// <summary>
+		/// 取消放大按键的 UniTask 异步任务
+		/// 1. 发送取消信号给正在运行的 ZoomThrottleLoop
+		/// 2. 释放 CancellationTokenSource 资源
+		/// 3. 清空引用以便垃圾回收
+		/// </summary>
+		private static void CancelZoomIn()
+		{
+			_zoomInCTS?.Cancel();   // 发送取消信号，触发 OperationCanceledException
+			_zoomInCTS?.Dispose();  // 释放资源
+			_zoomInCTS = null;      // 清空引用
+		}
+
+		/// <summary>
+		/// 取消缩小按键的 UniTask 异步任务
+		/// </summary>
+		private static void CancelZoomOut()
+		{
+			_zoomOutCTS?.Cancel();   // 发送取消信号
+			_zoomOutCTS?.Dispose();  // 释放资源
+			_zoomOutCTS = null;      // 清空引用
+		}
+
+		/// <summary>
+		/// 缩放控制的核心异步任务
+		/// 实现节流控制：0.5秒内立即缩放一次，0.5秒后每0.25秒缩放一次
+		/// 使用 CancellationToken 实现按键释放时立即停止
+		/// </summary>
+		/// <param name="direction">缩放方向：1 = 放大，-1 = 缩小</param>
+		/// <param name="token">取消令牌，按键释放时自动取消任务</param>
+		private static async UniTaskVoid ZoomThrottleLoop(int direction, CancellationToken token, Key otherKey)
+		{
+			try
+			{
+				// 阶段1：立即执行一次缩放（0.2秒内）
+				if (!Keyboard.current[otherKey].isPressed)
+				{
+					await UniTask.SwitchToMainThread(); // 回到主线程
+					DisplayZoom(direction);
+				}
+				
+				// 等待0.2秒（使用 UniTask.Delay 而不是协程的 WaitForSeconds）
+				await UniTask.Delay(200, DelayType.Realtime, PlayerLoopTiming.Update, token);
+				
+				// 阶段2：进入节流模式（0.2秒后，每0.75秒执行一次）
+				while (!token.IsCancellationRequested)
+				{
+					// 检查另一个缩放键是否也被按下，如果同时按下则停止，松开继续
+					if (Keyboard.current[otherKey].isPressed)
+					{
+						ModBehaviour.Logger.Log($"另一个缩放键被按下，停止当前缩放");
+						await UniTask.Delay(100, DelayType.Realtime, PlayerLoopTiming.Update, token);
+						continue;
+					}
+					await UniTask.SwitchToMainThread(); // 回到主线程
+					DisplayZoom(direction);  // 执行节流缩放
+					await UniTask.Delay(75, DelayType.Realtime, PlayerLoopTiming.Update, token);
+				}
+			}
+			catch (OperationCanceledException)
+			{
+				// 正常取消：按键释放时 CancellationTokenSource.Cancel() 触发此异常
+				// 不需要处理，直接退出任务
+			}
+		}
+
+		/// <summary>
+		/// 清理 Input System 相关资源
+		/// 在 Mod 禁用或销毁时调用
+		/// 1. 取消所有正在运行的缩放任务
+		/// 2. 释放 InputAction 资源
+		/// 3. 清空所有引用
+		/// </summary>
+		private static void CleanupInputSystem()
+		{
+			// 取消所有缩放任务
+			CancelZoomIn();
+			CancelZoomOut();
+			
+			// 释放 InputAction 资源（会自动取消事件绑定）
+			_toggleAction?.Dispose();
+			_zoomInAction?.Dispose();
+			_zoomOutAction?.Dispose();
+			
+			// 清空引用
+			_toggleAction = null;
+			_zoomInAction = null;
+			_zoomOutAction = null;
+		}
+
+		/// <summary>
+		/// 更新按键绑定
+		/// 当用户修改按键配置时调用，动态更新 Input System 的绑定
+		/// 需要先禁用 InputAction，修改绑定，再重新启用
+		/// </summary>
+		private static void UpdateInputBindings()
+		{
+			// 从配置获取最新的按键绑定
+			Key _toggleKey = ModSettingManager.GetValue<Key>("MiniMapToggleKey");
+			_zoomInKey = ModSettingManager.GetValue<Key>("MiniMapZoomInKey");
+			_zoomOutKey = ModSettingManager.GetValue<Key>("MiniMapZoomOutKey");
+			// Key _toggleKey = Key.Digit9;
+			// Key _zoomInKey = Key.Equals;
+			// Key _zoomOutKey = Key.Minus;
+			
+			string? ToggleKey = Keyboard.current[_toggleKey].path;
+			string? ZoomInKey = Keyboard.current[_zoomInKey].path;
+			string? ZoomOutKey = Keyboard.current[_zoomOutKey].path;
+			
+			// 更新切换键绑定
+			if (_toggleAction != null)
+			{
+				_toggleAction.Disable();  // 必须先禁用才能修改绑定
+				_toggleAction.ApplyBindingOverride(0, ToggleKey);  // 应用新的按键绑定
+				_toggleAction.Enable();   // 重新启用
+			}
+			
+			// 更新放大键绑定
+			if (_zoomInAction != null)
+			{
+				_zoomInAction.Disable();
+				_zoomInAction.ApplyBindingOverride(0, ZoomInKey);
+				_zoomInAction.Enable();
+			}
+			
+			// 更新缩小键绑定
+			if (_zoomOutAction != null)
+			{
+				_zoomOutAction.Disable();
+				_zoomOutAction.ApplyBindingOverride(0, ZoomOutKey);
+				_zoomOutAction.Enable();
+			}
+		}
     }
 }

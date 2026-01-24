@@ -5,8 +5,10 @@ using System.Reflection;
 using Duckov.Modding;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
+using UnityEngine.InputSystem;
 
 namespace MiniMap.Api;
+
 public static class ModSettingAPI {
     private const string ADD_DROP_DOWN_LIST = "AddDropDownList";
     private const string ADD_SLIDER = "AddSlider";
@@ -22,8 +24,9 @@ public static class ModSettingAPI {
     private const string ADD_KEYBINDING_WITH_DEFAULT = "AddKeybindingWithDefault";
     private const string ADD_BUTTON = "AddButton";
     private const string ADD_GROUP = "AddGroup";
-    private static float Version = 0.4f;
-    private static readonly Version VERSION = new Version(0, 4, 0);
+	private const string ADD_KEYBINDING_WITH_KEY = "AddKeybindingWithKey";
+    private static float Version = 0.5f;
+    private static readonly Version VERSION = new Version(0, 5, 1);
     public const string MOD_NAME = "ModSetting";
     private const string TYPE_NAME = "ModSetting.ModBehaviour";
     private static Type? modBehaviour;
@@ -48,8 +51,22 @@ public static class ModSettingAPI {
         GET_SAVED_VALUE,
         ADD_KEYBINDING_WITH_DEFAULT,
         ADD_BUTTON,
-        ADD_GROUP
+        ADD_GROUP,
+		ADD_KEYBINDING_WITH_KEY
     };
+	
+    /// <summary>
+    /// 添加一个按键绑定控件（新 Input System 的 Key 类型）
+    /// </summary>
+    public static bool AddKeybinding(string key, string description,
+        Key keyValue, Key defaultKeyValue = Key.None, Action<Key>? onValueChange = null)
+    {
+        if (!Available(key)) return false;
+        return InvokeMethod(ADD_KEYBINDING_WITH_KEY,
+            "AddKeybindingWithKey",  // 正确的方法名
+            new object?[] { modInfo, key, description, keyValue, defaultKeyValue, onValueChange },
+            typeof(Action<ModInfo, string, string, Key, Key, Action<Key>>));
+    }
 
     /// <summary>
     /// 初始化API

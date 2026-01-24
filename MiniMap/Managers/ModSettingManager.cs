@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using ZoinkModdingLibrary.Utils;
+using UnityEngine.InputSystem;
 
 namespace MiniMap.Managers
 {
@@ -254,30 +255,77 @@ namespace MiniMap.Managers
                         }
                         break;
                     }
-                case "keyBinding":
-                    {
-                        string? valueString = ModSettings[option.Key]?.ToString();
-                        if (string.IsNullOrEmpty(valueString))
-                        {
-                            valueString = option.Value?["default"]?.ToString() ?? "None";
-                            SaveValue(option.Key, valueString, true);
-                        }
-                        if (!noUI)
-                        {
-                            KeyCode value = Enum.Parse<KeyCode>(valueString);
-                            Api.ModSettingAPI.AddKeybinding(
-                                option.Key,
-                                option.Value?[isChinese ? "descCN" : "descEN"]?.ToString() ?? "",
-                                value,
-                                (v) =>
-                                {
-                                    SaveValue(option.Key, v.ToString());
-                                    ConfigChanged?.Invoke(option.Key, v);
-                                }
-                            );
-                        }
-                        break;
-                    }
+				case "keyBinding":
+					{
+						string? valueString = ModSettings[option.Key]?.ToString();
+						if (string.IsNullOrEmpty(valueString))
+						{
+							valueString = option.Value?["default"]?.ToString() ?? "None";
+							SaveValue(option.Key, valueString, true);
+						}
+						
+						if (!noUI)
+						{
+							// 先尝试解析为 Key（新 Input System）
+							if (Enum.TryParse<Key>(valueString, true, out Key keyValue))
+							{
+								// 使用 Key 版本（新 Input System）
+								Key defaultKey = option.Value?["default"] != null && 
+												 Enum.TryParse<Key>(option.Value["default"]?.ToString(), true, out Key defaultKeyValue) 
+												 ? defaultKeyValue : Key.None;
+								
+								// 明确指定 Action<Key> 类型
+								Action<Key> callback = (Key v) =>
+								{
+									SaveValue(option.Key, v.ToString());
+									ConfigChanged?.Invoke(option.Key, v);
+								};
+								
+								bool success = Api.ModSettingAPI.AddKeybinding(
+									option.Key,
+									option.Value?[isChinese ? "descCN" : "descEN"]?.ToString() ?? "",
+									keyValue,
+									defaultKey,
+									callback
+								);
+								
+								ModBehaviour.Logger.Log($"[KeyBinding] Key版本调用结果: {success}");
+							}
+							else
+							{
+								// 回退到 KeyCode（旧系统）
+								try
+								{
+									KeyCode value = Enum.Parse<KeyCode>(valueString);
+									KeyCode defaultKeyCode = option.Value?["default"] != null 
+										? Enum.Parse<KeyCode>(option.Value["default"]?.ToString() ?? "None") 
+										: KeyCode.None;
+									
+									// 明确指定 Action<KeyCode> 类型
+									Action<KeyCode> callback = (KeyCode v) =>
+									{
+										SaveValue(option.Key, v.ToString());
+										ConfigChanged?.Invoke(option.Key, v);
+									};
+									
+									bool success = Api.ModSettingAPI.AddKeybinding(
+										option.Key,
+										option.Value?[isChinese ? "descCN" : "descEN"]?.ToString() ?? "",
+										value,
+										defaultKeyCode,
+										callback
+									);
+									
+									ModBehaviour.Logger.Log($"[KeyBinding] KeyCode版本调用结果: {success}");
+								}
+								catch (Exception e)
+								{
+									ModBehaviour.Logger.LogError($"[KeyBinding] 解析按键失败: {valueString}, 错误: {e.Message}");
+								}
+							}
+						}
+						break;
+					}
                 case "dropdownList":
                     {
                         List<string> options = option.Value?[isChinese ? "optionsCN" : "optionsEN"] is JArray array ? array.ToList<string>() : new List<string>();
