@@ -36,7 +36,7 @@ public static bool UpdateScalePrefix(
         float d = ___pointOfInterest?.ScaleFactor ?? 1f;
         
         // 判断当前显示的是系统地图还是Mod地图
-        bool isInMiniMap = ___master == CustomMinimapManager.DuplicatedMinimapDisplay;
+        bool isInMiniMap = ___master == MinimapManager.MinimapDisplay;
         
         // 如果是CharacterPoiBase（包括位置图标和方向箭头）
         if (___pointOfInterest is CharacterPoiBase characterPoi)
