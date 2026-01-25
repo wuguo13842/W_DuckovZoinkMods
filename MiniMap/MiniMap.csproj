@@ -3,13 +3,14 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
-    <SteamLibrary>S:\SteamLibrary\steamapps</SteamLibrary>
+    <SteamLibrary>$([System.IO.File]::ReadAllText("SteamLibrary.txt"))</SteamLibrary>
     <WorkShopPath>$(SteamLibrary)\workshop\content\3167020</WorkShopPath>
     <DuckovPath>$(SteamLibrary)\common\Escape from Duckov\Duckov_Data</DuckovPath>
     <ManagedPath>$(DuckovPath)\Managed</ManagedPath>
     <CopyPath>$(DuckovPath)\Mods\$(AssemblyName)</CopyPath>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
+  
   <ItemGroup>
     <!-- Harmony DLL -->
     <Reference Include="0Harmony">

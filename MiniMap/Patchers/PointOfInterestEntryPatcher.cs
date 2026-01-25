@@ -155,7 +155,7 @@ public static bool UpdateScalePrefix(
                 {
                     ___icon.color = poi.Color;
                 }
-                ___displayName.text = ___master == CustomMinimapManager.DuplicatedMinimapDisplay && ModSettingManager.GetValue("hideDisplayName", false) ? "" : poi.DisplayName;
+                ___displayName.text = ___master == MinimapManager.MinimapDisplay && ModSettingManager.GetValue("hideDisplayName", false) ? "" : poi.DisplayName;
             }
             RectTransform icon = ___icon.rectTransform;
             RectTransform? layout = icon.parent as RectTransform;

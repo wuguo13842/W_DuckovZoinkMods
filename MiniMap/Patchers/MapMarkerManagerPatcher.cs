@@ -24,7 +24,7 @@ namespace MiniMap.Patchers
         public static void LoadPostfix(MapMarkerManager __instance)
         {
             ModBehaviour.Logger.Log("MapMarkerManagers Loaded");
-            CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
+            MinimapManager.MinimapDisplay.InvokeMethod("HandlePointsOfInterests");
         }
     }
 }

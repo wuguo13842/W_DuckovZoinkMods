@@ -22,7 +22,7 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
         {
             if (poi is SimplePointOfInterest pointOfInterest && poi.name.StartsWith("CharacterMarker:"))
             {
-                if (__instance == CustomMinimapManager.DuplicatedMinimapDisplay)
+                if (__instance == MinimapManager.MinimapDisplay)
                     return false;
                 pointOfInterest.ScaleFactor = ModSettingManager.GetValue("bossLiveMap.poiScaleFactor", 1.0f);
             }

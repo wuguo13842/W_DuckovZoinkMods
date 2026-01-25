@@ -50,7 +50,7 @@ namespace MiniMap.Compatibility.ShoulderSurfing.Patchers
             switch (key)
             {
                 case "shoulderSurfing.showPlayerArrow":
-                    CustomMinimapManager.CallDisplayMethod("AutoSetup");
+                    MinimapManager.MinimapDisplay.InvokeMethod("AutoSetup");
                     break;
             }
         }

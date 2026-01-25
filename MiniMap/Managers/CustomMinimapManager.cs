@@ -8,22 +8,19 @@ using MiniMap.Utils;
 using SodaCraft.Localizations;
 using System;
 using System.Collections;
-using System.Reflection;
+using System.Threading;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UI.ProceduralImage;
-using UnityEngine.InputSystem;
-using System.Threading;
 using ZoinkModdingLibrary.GameUI;
 using ZoinkModdingLibrary.Patcher;
-using ZoinkModdingLibrary.Utils;
-using UnityEngine.InputSystem;
 
 namespace MiniMap.Managers
 {
-    public static class CustomMinimapManager
+    public static class MinimapManager
     {
         public static event Action? MiniMapApplied;
         public static bool isEnabled = true;
@@ -34,7 +31,6 @@ namespace MiniMap.Managers
         private static float northFontSize = 18f;
 
         public static float MapBorderEulerZRotation = 0f;
-        //public static float MapNorthEulerZRotation = 0f;
         public static Vector2 displayZoomRange = new Vector2(0.1f, 30f);
 
         public static Color backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
@@ -42,24 +38,26 @@ namespace MiniMap.Managers
         private static GameObject? customCanvas;
         private static GameObject? miniMapContainer;
         public static GameObject? miniMapScaleContainer;
-        private static GameObject? duplicatedMinimapObject;
+        private static GameObject? minimapObject;
 
-        public static MiniMapDisplay? DuplicatedMinimapDisplay
+        private static MiniMapDisplay? minimapDisplay;
+        private static MiniMapDisplay? originalDisplay;
+
+        public static MiniMapDisplay? MinimapDisplay
         {
             get
             {
-                return duplicatedMinimapDisplay;
+                return minimapDisplay;
             }
         }
-        private static MiniMapDisplay? duplicatedMinimapDisplay;
-        public static MiniMapDisplay? OriginalMinimapDisplay
+        public static MiniMapDisplay? OriginalDisplay
         {
             get
             {
-                return originalMinimapDisplay;
+                return originalDisplay;
             }
         }
-        private static MiniMapDisplay? originalMinimapDisplay;
+
         private static RectTransform? miniMapRect;
         private static RectTransform? miniMapViewportRect;
         private static RectTransform? miniMapNorthRect;
@@ -67,7 +65,6 @@ namespace MiniMap.Managers
         private static TextMeshProUGUI? northText;
 
         private static Coroutine? settingCor;
-        private static Coroutine? initMapCor;
 
         public static void Initialize()
         {
@@ -148,15 +145,7 @@ namespace MiniMap.Managers
                 bool enabled = ModSettingManager.GetValue<bool>("enableMiniMap");
                 isEnabled = enabled;
                 isToggled = enabled;
-                if (isEnabled)
-                {
-                    ApplyMiniMap().ContinueWith(() => customCanvas?.SetActive(true));
-                }
-                else
-                {
-                    customCanvas?.SetActive(false);
-                    ClearMap();
-                }
+                customCanvas?.SetActive(isEnabled);
             }
             catch (Exception e)
             {
@@ -224,7 +213,7 @@ namespace MiniMap.Managers
 
         public static bool HasMap()
         {
-            return isEnabled && IsInitialized && duplicatedMinimapObject != null && (customCanvas?.activeInHierarchy ?? false);
+            return isEnabled && IsInitialized && minimapObject != null && (customCanvas?.activeInHierarchy ?? false);
         }
 
         public static void DisplayZoom(int symbol)
@@ -245,9 +234,9 @@ namespace MiniMap.Managers
             try
             {
                 float displayZoomScale = ModSettingManager.GetValue<float>("displayZoomScale");
-                if (duplicatedMinimapDisplay != null)
+                if (minimapDisplay != null)
                 {
-                    duplicatedMinimapDisplay.transform.localScale = Vector3.one * displayZoomScale;
+                    minimapDisplay.transform.localScale = Vector3.one * displayZoomScale;
                 }
             }
             catch (Exception e)
@@ -350,15 +339,20 @@ namespace MiniMap.Managers
                     customCanvas?.SetActive(false);
                     return;
                 }
-                if (ModBehaviour.Instance == null)
+                if (minimapDisplay == null)
                 {
-                    return;
+                    DuplicateDisplay();
                 }
-                if (initMapCor != null)
-                    ModBehaviour.Instance.StopCoroutine(initMapCor);
-                ClearMap();
-                customCanvas?.SetActive(false);
-                initMapCor = ModBehaviour.Instance.StartCoroutine(ApplyMiniMapCoroutine());
+                //if (ModBehaviour.Instance == null)
+                //{
+                //    return;
+                //}
+                ////if (initMapCor != null)
+                ////    ModBehaviour.Instance.StopCoroutine(initMapCor);
+                ////ClearMap();
+                //customCanvas?.SetActive(false);
+                //initMapCor = ModBehaviour.Instance.StartCoroutine(ApplyMiniMapCoroutine());
+                ApplyMiniMap().Forget();
             }
             catch (Exception e)
             {
@@ -366,22 +360,31 @@ namespace MiniMap.Managers
             }
         }
 
-        public static void ClearMap()
+        private async static UniTask ApplyMiniMap()
         {
             try
             {
-                if (duplicatedMinimapDisplay != null)
+                if (LevelManager.Instance == null)
                 {
-                    CallDisplayMethod("UnregisterEvents");
+                    return;
                 }
-                GameObject.Destroy(duplicatedMinimapObject);
-                GameObject.Destroy(duplicatedMinimapDisplay);
-                duplicatedMinimapDisplay = null;
-                duplicatedMinimapObject = null;
+                ModBehaviour.Logger.Log($"等待角色初始化...");
+                while (LevelManager.Instance.MainCharacter == null || LevelManager.Instance.PetCharacter == null)
+                {
+                    await UniTask.Delay(200);
+                }
+                ModBehaviour.Logger.Log($"角色已完成初始化");
+                ModBehaviour.Logger.Log($"已生成小地图");
+                PoiCommon.CreatePoiIfNeeded(LevelManager.Instance.MainCharacter, out _, out DirectionPointOfInterest? mainDirectionPoi);
+                PoiCommon.CreatePoiIfNeeded(LevelManager.Instance.PetCharacter, out CharacterPointOfInterest? petPoi, out DirectionPointOfInterest? petDirectionPoi);
+                MapMarkerManager.Instance.InvokeMethod("Load");
+                customCanvas?.SetActive(true);
+                await UniTask.Delay(500);
+                minimapDisplay.InvokeMethod("HandlePointsOfInterests");
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"清理小地图时发生错误: {e.Message}");
+                ModBehaviour.Logger.LogError($"生成小地图时发生错误: {e.Message}");
             }
         }
 
@@ -389,7 +392,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                bool minimapIsOn = isEnabled && IsInitialized && duplicatedMinimapObject != null;
+                bool minimapIsOn = isEnabled && IsInitialized && minimapObject != null;
                 bool inputActive = Application.isFocused && InputManager.InputActived && CharacterInputControl.Instance;
                 if (!inputActive)
                 {
@@ -419,7 +422,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                var displayEntries = duplicatedMinimapDisplay?.GetComponentsInChildren<MiniMapDisplayEntry>();
+                var displayEntries = minimapDisplay?.GetComponentsInChildren<MiniMapDisplayEntry>();
                 if (displayEntries == null)
                 {
                     return;
@@ -455,45 +458,6 @@ namespace MiniMap.Managers
             }
         }
 
-        public static IEnumerator ApplyMiniMapCoroutine()
-        {
-            yield return new WaitForSecondsRealtime(0.5f);
-            ModBehaviour.Logger.Log($"初始化小地图");
-            ApplyMiniMap().ContinueWith(() => UniTask.WaitForSeconds(0.5f)).ContinueWith(() => customCanvas?.SetActive(true));
-        }
-
-        public async static UniTask ApplyMiniMap()
-        {
-            try
-            {
-                while (LevelManager.Instance?.MainCharacter == null || LevelManager.Instance?.PetCharacter == null)
-                {
-                    ModBehaviour.Logger.Log($"等待角色初始化...");
-                    await UniTask.Delay(100);
-                }
-                ModBehaviour.Logger.Log($"角色已完成初始化");
-                if (DuplicateMinimapDisplay())
-                {
-                    if (ApplyDuplicatedMinimap())
-                    {
-                        ModBehaviour.Logger.Log($"已生成小地图");
-                        PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.MainCharacter, out _, out DirectionPointOfInterest? mainDirectionPoi);
-                        PoiCommon.CreatePoiIfNeeded(LevelManager.Instance?.PetCharacter, out CharacterPointOfInterest? petPoi, out DirectionPointOfInterest? petDirectionPoi);
-                        MapMarkerManager.Instance.InvokeMethod("Load");
-                        CallDisplayMethod("HandlePointsOfInterests");
-                    }
-                }
-                else
-                {
-                    ModBehaviour.Logger.LogError($"生成小地图失败！");
-                }
-            }
-            catch (Exception e)
-            {
-                ModBehaviour.Logger.LogError($"生成小地图时发生错误: {e.Message}");
-            }
-        }
-
         private static void CreateMiniMapContainer()
         {
             try
@@ -501,6 +465,7 @@ namespace MiniMap.Managers
                 ModBehaviour.Logger.Log($"创建小地图容器");
                 // 创建 Canvas
                 customCanvas = new GameObject("Zoink_MinimapCanvas");
+                customCanvas.SetActive(false);
                 var targetCanvas = customCanvas.AddComponent<Canvas>();
                 targetCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
                 targetCanvas.sortingOrder = 0; // 确保在最前面
@@ -600,7 +565,6 @@ namespace MiniMap.Managers
                 miniMapViewportRect.offsetMin = Vector2.zero;
                 miniMapViewportRect.offsetMax = Vector2.zero;
 
-                customCanvas.SetActive(false);
                 GameObject.DontDestroyOnLoad(customCanvas);
                 ModBehaviour.Logger.Log($"已创建小地图容器");
             }
@@ -609,44 +573,13 @@ namespace MiniMap.Managers
                 ModBehaviour.Logger.LogError($"创建小地图容器时发生错误: {e.Message}");
             }
         }
+
         public static MiniMapDisplay? GetOriginalDisplay()
         {
             try
             {
-                // 使用反射获取MinimapView单例
-                Type minimapViewType = typeof(MiniMapView);
-                if (minimapViewType == null)
-                {
-                    ModBehaviour.Logger.LogError($"未找到类型：MinimapView");
-                    return null;
-                }
-                MiniMapView minimapView = MiniMapView.Instance;
-                if (minimapView == null)
-                {
-                    ModBehaviour.Logger.LogError($"未找到实例：MinimapView");
-                    return null;
-                }
-
-                FieldInfo minimapDisplayField = minimapViewType.GetField("display",
-                    BindingFlags.NonPublic | BindingFlags.Instance);
-
-                if (minimapDisplayField == null)
-                {
-                    PropertyInfo minimapDisplayProperty = minimapViewType.GetProperty("display",
-                        BindingFlags.NonPublic | BindingFlags.Instance);
-
-                    if (minimapDisplayProperty == null)
-                    {
-                        ModBehaviour.Logger.LogError($"未找到字段或属性：display");
-                        return null;
-                    }
-
-                    return minimapDisplayProperty.GetValue(minimapView) as MiniMapDisplay;
-                }
-                else
-                {
-                    return minimapDisplayField.GetValue(minimapView) as MiniMapDisplay;
-                }
+                MiniMapView? minimapView = MiniMapView.Instance;
+                return minimapView?.GetField<MiniMapDisplay>("display");
             }
             catch (Exception e)
             {
@@ -655,63 +588,39 @@ namespace MiniMap.Managers
             }
         }
 
-        private static bool DuplicateMinimapDisplay()
-        {
-            return DuplicateGameObject(GetOriginalDisplay());
-        }
-
-        private static bool DuplicateGameObject(MiniMapDisplay? originalDisplay)
+        public static bool DuplicateDisplay()
         {
             try
             {
+                MiniMapDisplay? originalDisplay = GetOriginalDisplay();
                 if (originalDisplay == null)
                 {
                     ModBehaviour.Logger.LogError($"原始地图为空！");
                     return false;
                 }
-
-                originalMinimapDisplay = originalDisplay;
-
-                GameObject originalGameObject = originalDisplay.gameObject;
-                if (duplicatedMinimapObject != null)
+                if (minimapObject != null)
                 {
-                    GameObject.Destroy(duplicatedMinimapObject);
-                    GameObject.Destroy(duplicatedMinimapDisplay);
+                    ModBehaviour.Logger.LogError($"原始地图已复制，请勿重复复制！");
+                    return false;
                 }
-                duplicatedMinimapObject = GameObject.Instantiate(originalGameObject);
-                duplicatedMinimapDisplay = duplicatedMinimapObject.GetComponent(originalDisplay.GetType()) as MiniMapDisplay;
-                duplicatedMinimapDisplay.SetField("autoSetupOnEnable", true);
-                CallDisplayMethod("UnregisterEvents");
-                CallDisplayMethod("RegisterEvents");
-                if (duplicatedMinimapDisplay == null || duplicatedMinimapObject == null)
+
+                MinimapManager.originalDisplay = originalDisplay;
+                minimapObject = GameObject.Instantiate(originalDisplay.gameObject);
+                minimapDisplay = minimapObject.GetComponent<MiniMapDisplay>();
+                minimapDisplay.SetField("autoSetupOnEnable", true);
+                minimapDisplay.InvokeMethod("UnregisterEvents");
+                minimapDisplay.InvokeMethod("RegisterEvents");
+                if (minimapDisplay == null || minimapObject == null)
                 {
                     ModBehaviour.Logger.LogError($"获取 MinimapDisplay 复制体失败！");
-                    GameObject.Destroy(duplicatedMinimapObject);
-                    GameObject.Destroy(duplicatedMinimapDisplay);
+                    GameObject.Destroy(minimapObject);
+                    GameObject.Destroy(minimapDisplay);
                     return false;
                 }
-                duplicatedMinimapObject.name = "Zoink_MiniMap_Duplicate";
-                return true;
-            }
-            catch (Exception e)
-            {
-                ModBehaviour.Logger.LogError($"复制地图时发生错误: {e.Message}");
-                return false;
-            }
-        }
+                minimapObject.name = "Zoink_MiniMap_Duplicate";
 
-        private static bool ApplyDuplicatedMinimap()
-        {
-            try
-            {
-                ModBehaviour.Logger.Log($"应用复制体");
-                if (duplicatedMinimapObject == null || duplicatedMinimapDisplay == null || miniMapScaleContainer == null)
-                {
-                    ModBehaviour.Logger.LogError($"关键组件为null，无法应用当前地图！");
-                    return false;
-                }
-                duplicatedMinimapObject.transform.SetParent(miniMapScaleContainer.transform);
-                RectTransform rectTransform = duplicatedMinimapObject.GetComponent<RectTransform>();
+                minimapObject.transform.SetParent(miniMapScaleContainer?.transform);
+                RectTransform rectTransform = minimapObject.GetComponent<RectTransform>();
                 if (rectTransform != null)
                 {
                     rectTransform.anchorMin = Vector2.zero;
@@ -721,46 +630,17 @@ namespace MiniMap.Managers
                     rectTransform.localScale = Vector3.one;
                 }
 
-                duplicatedMinimapObject.transform.localPosition = Vector3.zero;
-                duplicatedMinimapDisplay.transform.localRotation = Quaternion.identity;
+                minimapObject.transform.localPosition = Vector3.zero;
+                minimapDisplay.transform.localRotation = Quaternion.identity;
                 MiniMapApplied?.Invoke();
-                CallDisplayMethod("AutoSetup");
                 UpdateDisplayZoom();
+
                 return true;
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"应用复制体时发生错误: {e.Message}");
+                ModBehaviour.Logger.LogError($"复制地图时发生错误: {e.Message}");
                 return false;
-            }
-        }
-
-        public static void CallDisplayMethod(string methodName)
-        {
-            if (duplicatedMinimapDisplay == null)
-            {
-                ModBehaviour.Logger.LogError($"无法执行 {methodName} 方法 - duplicatedMinimapDisplay 为空!");
-                return;
-            }
-
-            try
-            {
-                Type minimapDisplayType = duplicatedMinimapDisplay.GetType();
-                MethodInfo autoSetupMethod = minimapDisplayType.GetMethod(methodName,
-                    BindingFlags.NonPublic | BindingFlags.Instance);
-
-                if (autoSetupMethod != null)
-                {
-                    autoSetupMethod.Invoke(duplicatedMinimapDisplay, null);
-                }
-                else
-                {
-                    ModBehaviour.Logger.LogWarning($"{methodName} method not found in MinimapDisplay type. This might be expected if the method doesn't exist.");
-                }
-            }
-            catch (Exception e)
-            {
-                ModBehaviour.Logger.LogError($"执行 {methodName} 方法时发生错误: {e.Message}");
             }
         }
 
@@ -768,13 +648,13 @@ namespace MiniMap.Managers
         {
             try
             {
-                if (duplicatedMinimapDisplay == null || miniMapNorthRect == null)
+                if (minimapDisplay == null || miniMapNorthRect == null)
                 {
                     return;
                 }
                 float rotationAngle = ModSettingManager.GetValue<bool>("miniMapRotation") ? MiniMapCommon.GetMinimapRotation() : MiniMapCommon.originMapZRotation;
                 var rotation = Quaternion.Euler(0, 0, rotationAngle);
-                duplicatedMinimapDisplay.transform.rotation = rotation;
+                minimapDisplay.transform.rotation = rotation;
                 miniMapNorthRect.localRotation = rotation;
             }
             catch (Exception e)
@@ -787,7 +667,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                if (duplicatedMinimapDisplay == null)
+                if (minimapDisplay == null)
                 {
                     return;
                 }
@@ -797,11 +677,11 @@ namespace MiniMap.Managers
                     return;
                 }
                 Vector3 minimapPos;
-                if (!duplicatedMinimapDisplay.TryConvertWorldToMinimap(main.transform.position, SceneInfoCollection.GetSceneID(SceneManager.GetActiveScene().buildIndex), out minimapPos))
+                if (!minimapDisplay.TryConvertWorldToMinimap(main.transform.position, SceneInfoCollection.GetSceneID(SceneManager.GetActiveScene().buildIndex), out minimapPos))
                 {
                     return;
                 }
-                if (duplicatedMinimapDisplay.transform is not RectTransform rectTransform || rectTransform.parent is not RectTransform parentTransform)
+                if (minimapDisplay.transform is not RectTransform rectTransform || rectTransform.parent is not RectTransform parentTransform)
                 {
                     return;
                 }
@@ -814,247 +694,247 @@ namespace MiniMap.Managers
                 ModBehaviour.Logger.LogError($"更新小地图移动时发生错误: {e.Message}");
             }
         }
-        
+
         // ==================== 新增的 Input System 方法 ====================
-		
-        
+
+
         // 新增的 Input System 相关字段
-		private static Key _zoomInKey = ModSettingManager.GetValue<Key>("MiniMapZoomInKey");
-		private static Key _zoomOutKey = ModSettingManager.GetValue<Key>("MiniMapZoomOutKey");
-		private static InputAction? _toggleAction;       // 切换小地图显示/隐藏的按键动作
-		private static InputAction? _zoomInAction;       // 放大按键动作
-		private static InputAction? _zoomOutAction;      // 缩小按键动作
-		private static bool _isKeyLook  = false;         // 通用按键锁
+        private static Key _zoomInKey = ModSettingManager.GetValue<Key>("MiniMapZoomInKey");
+        private static Key _zoomOutKey = ModSettingManager.GetValue<Key>("MiniMapZoomOutKey");
+        private static InputAction? _toggleAction;       // 切换小地图显示/隐藏的按键动作
+        private static InputAction? _zoomInAction;       // 放大按键动作
+        private static InputAction? _zoomOutAction;      // 缩小按键动作
+        private static bool _isKeyLook = false;         // 通用按键锁
 
-		// UniTask 取消令牌源：用于控制异步任务的取消
-		private static CancellationTokenSource? _zoomInCTS;   // 放大按键的异步任务取消令牌
-		private static CancellationTokenSource? _zoomOutCTS;  // 缩小按键的异步任务取消令牌
+        // UniTask 取消令牌源：用于控制异步任务的取消
+        private static CancellationTokenSource? _zoomInCTS;   // 放大按键的异步任务取消令牌
+        private static CancellationTokenSource? _zoomOutCTS;  // 缩小按键的异步任务取消令牌
 
-		/// <summary>
-		/// 初始化 Input System，创建三个按键动作并绑定事件
-		/// 切换键：使用 performed 事件（按下时触发一次）
-		/// 缩放键：使用 started（按下开始）和 canceled（释放）事件实现长按检测
-		/// </summary>
-		private static void InitializeInputSystem()
-		{
-			try
-			{
-				Key _toggleKey = ModSettingManager.GetValue<Key>("MiniMapToggleKey");
-				// Key _toggleKey = Key.Digit9;
-				// Key _zoomInKey = Key.Equals;
-				// Key _zoomOutKey = Key.Minus;
+        /// <summary>
+        /// 初始化 Input System，创建三个按键动作并绑定事件
+        /// 切换键：使用 performed 事件（按下时触发一次）
+        /// 缩放键：使用 started（按下开始）和 canceled（释放）事件实现长按检测
+        /// </summary>
+        private static void InitializeInputSystem()
+        {
+            try
+            {
+                Key _toggleKey = ModSettingManager.GetValue<Key>("MiniMapToggleKey");
+                // Key _toggleKey = Key.Digit9;
+                // Key _zoomInKey = Key.Equals;
+                // Key _zoomOutKey = Key.Minus;
 
-				// 切换小地图按键：默认 M 键
-				string ToggleKey = Keyboard.current[_toggleKey].path;
-				_toggleAction = new InputAction("ToggleMiniMap", InputActionType.Button, ToggleKey);
-				_toggleAction.performed += OnTogglePerformed;  // 按下时触发一次
-				_toggleAction.Enable();
-				
-				// 放大按键：默认 = 键
-				string ZoomInKey = Keyboard.current[_zoomInKey].path;
-				_zoomInAction = new InputAction("ZoomInMiniMap", InputActionType.Button, ZoomInKey);
-				_zoomInAction.started += OnZoomInStarted;      // 按键按下开始
-				_zoomInAction.canceled += OnZoomInCanceled;   // 按键释放
-				_zoomInAction.Enable();
-				
-				// 缩小按键：默认 - 键
-				string ZoomOutKey = Keyboard.current[_zoomOutKey].path;
-				_zoomOutAction = new InputAction("ZoomOutMiniMap", InputActionType.Button, ZoomOutKey);
-				_zoomOutAction.started += OnZoomOutStarted;    // 按键按下开始
-				_zoomOutAction.canceled += OnZoomOutCanceled; // 按键释放
-				_zoomOutAction.Enable();
-			}
-			catch (Exception e)
-			{
-				ModBehaviour.Logger.LogError($"初始化 Input System 失败: {e.Message}");
-			}
-		}
+                // 切换小地图按键：默认 M 键
+                string ToggleKey = Keyboard.current[_toggleKey].path;
+                _toggleAction = new InputAction("ToggleMiniMap", InputActionType.Button, ToggleKey);
+                _toggleAction.performed += OnTogglePerformed;  // 按下时触发一次
+                _toggleAction.Enable();
 
-		/// <summary>
-		/// 切换小地图显示/隐藏（按下切换键时触发）
-		/// 和原有的 CheckToggleKey() 功能相同，但使用 Input System 事件驱动
-		/// </summary>
-		private static void OnTogglePerformed(InputAction.CallbackContext context)
-		{
-			if (isEnabled && duplicatedMinimapObject != null)
-			{
-				isToggled = !isToggled;           // 反转显示状态
-				customCanvas?.SetActive(isToggled); // 显示/隐藏 Canvas
-			}
-		}
+                // 放大按键：默认 = 键
+                string ZoomInKey = Keyboard.current[_zoomInKey].path;
+                _zoomInAction = new InputAction("ZoomInMiniMap", InputActionType.Button, ZoomInKey);
+                _zoomInAction.started += OnZoomInStarted;      // 按键按下开始
+                _zoomInAction.canceled += OnZoomInCanceled;   // 按键释放
+                _zoomInAction.Enable();
 
-		/// <summary>
-		/// 放大按键按下开始（Input System 的 started 事件）
-		/// 启动缩放控制：先取消之前的任务，再创建新任务
-		/// </summary>
-		private static void OnZoomInStarted(InputAction.CallbackContext context)
-		{
-			CancelZoomIn();  // 取消可能还在运行的放大任务
-			_zoomInCTS = new CancellationTokenSource();  // 创建新的取消令牌源
-			ZoomThrottleLoop(1, _zoomInCTS.Token, _zoomOutKey).Forget();  // 启动缩放控制任务（1 = 放大方向）
-		}
+                // 缩小按键：默认 - 键
+                string ZoomOutKey = Keyboard.current[_zoomOutKey].path;
+                _zoomOutAction = new InputAction("ZoomOutMiniMap", InputActionType.Button, ZoomOutKey);
+                _zoomOutAction.started += OnZoomOutStarted;    // 按键按下开始
+                _zoomOutAction.canceled += OnZoomOutCanceled; // 按键释放
+                _zoomOutAction.Enable();
+            }
+            catch (Exception e)
+            {
+                ModBehaviour.Logger.LogError($"初始化 Input System 失败: {e.Message}");
+            }
+        }
 
-		/// <summary>
-		/// 放大按键释放（Input System 的 canceled 事件）
-		/// 停止缩放控制
-		/// </summary>
-		private static void OnZoomInCanceled(InputAction.CallbackContext context)
-		{
-			CancelZoomIn();  // 取消放大任务
-		}
+        /// <summary>
+        /// 切换小地图显示/隐藏（按下切换键时触发）
+        /// 和原有的 CheckToggleKey() 功能相同，但使用 Input System 事件驱动
+        /// </summary>
+        private static void OnTogglePerformed(InputAction.CallbackContext context)
+        {
+            if (isEnabled && minimapObject != null)
+            {
+                isToggled = !isToggled;           // 反转显示状态
+                customCanvas?.SetActive(isToggled); // 显示/隐藏 Canvas
+            }
+        }
 
-		/// <summary>
-		/// 缩小按键按下开始
-		/// 启动缩放控制：先取消之前的任务，再创建新任务
-		/// </summary>
-		private static void OnZoomOutStarted(InputAction.CallbackContext context)
-		{
-			CancelZoomOut();  // 取消可能还在运行的缩小任务
-			_zoomOutCTS = new CancellationTokenSource();  // 创建新的取消令牌源
-			ZoomThrottleLoop(-1, _zoomOutCTS.Token, _zoomInKey).Forget();  // 启动缩放控制任务（-1 = 缩小方向）
-		}
+        /// <summary>
+        /// 放大按键按下开始（Input System 的 started 事件）
+        /// 启动缩放控制：先取消之前的任务，再创建新任务
+        /// </summary>
+        private static void OnZoomInStarted(InputAction.CallbackContext context)
+        {
+            CancelZoomIn();  // 取消可能还在运行的放大任务
+            _zoomInCTS = new CancellationTokenSource();  // 创建新的取消令牌源
+            ZoomThrottleLoop(1, _zoomInCTS.Token, _zoomOutKey).Forget();  // 启动缩放控制任务（1 = 放大方向）
+        }
 
-		/// <summary>
-		/// 缩小按键释放
-		/// 停止缩放控制
-		/// </summary>
-		private static void OnZoomOutCanceled(InputAction.CallbackContext context)
-		{
-			CancelZoomOut();  // 取消缩小任务
-		}
+        /// <summary>
+        /// 放大按键释放（Input System 的 canceled 事件）
+        /// 停止缩放控制
+        /// </summary>
+        private static void OnZoomInCanceled(InputAction.CallbackContext context)
+        {
+            CancelZoomIn();  // 取消放大任务
+        }
 
-		/// <summary>
-		/// 取消放大按键的 UniTask 异步任务
-		/// 1. 发送取消信号给正在运行的 ZoomThrottleLoop
-		/// 2. 释放 CancellationTokenSource 资源
-		/// 3. 清空引用以便垃圾回收
-		/// </summary>
-		private static void CancelZoomIn()
-		{
-			_zoomInCTS?.Cancel();   // 发送取消信号，触发 OperationCanceledException
-			_zoomInCTS?.Dispose();  // 释放资源
-			_zoomInCTS = null;      // 清空引用
-		}
+        /// <summary>
+        /// 缩小按键按下开始
+        /// 启动缩放控制：先取消之前的任务，再创建新任务
+        /// </summary>
+        private static void OnZoomOutStarted(InputAction.CallbackContext context)
+        {
+            CancelZoomOut();  // 取消可能还在运行的缩小任务
+            _zoomOutCTS = new CancellationTokenSource();  // 创建新的取消令牌源
+            ZoomThrottleLoop(-1, _zoomOutCTS.Token, _zoomInKey).Forget();  // 启动缩放控制任务（-1 = 缩小方向）
+        }
 
-		/// <summary>
-		/// 取消缩小按键的 UniTask 异步任务
-		/// </summary>
-		private static void CancelZoomOut()
-		{
-			_zoomOutCTS?.Cancel();   // 发送取消信号
-			_zoomOutCTS?.Dispose();  // 释放资源
-			_zoomOutCTS = null;      // 清空引用
-		}
+        /// <summary>
+        /// 缩小按键释放
+        /// 停止缩放控制
+        /// </summary>
+        private static void OnZoomOutCanceled(InputAction.CallbackContext context)
+        {
+            CancelZoomOut();  // 取消缩小任务
+        }
 
-		/// <summary>
-		/// 缩放控制的核心异步任务
-		/// 实现节流控制：0.5秒内立即缩放一次，0.5秒后每0.25秒缩放一次
-		/// 使用 CancellationToken 实现按键释放时立即停止
-		/// </summary>
-		/// <param name="direction">缩放方向：1 = 放大，-1 = 缩小</param>
-		/// <param name="token">取消令牌，按键释放时自动取消任务</param>
-		private static async UniTaskVoid ZoomThrottleLoop(int direction, CancellationToken token, Key otherKey)
-		{
-			try
-			{
-				// 阶段1：立即执行一次缩放（0.2秒内）
-				if (!Keyboard.current[otherKey].isPressed)
-				{
-					await UniTask.SwitchToMainThread(); // 回到主线程
-					DisplayZoom(direction);
-				}
-				
-				// 等待0.2秒（使用 UniTask.Delay 而不是协程的 WaitForSeconds）
-				await UniTask.Delay(200, DelayType.Realtime, PlayerLoopTiming.Update, token);
-				
-				// 阶段2：进入节流模式（0.2秒后，每0.75秒执行一次）
-				while (!token.IsCancellationRequested)
-				{
-					// 检查另一个缩放键是否也被按下，如果同时按下则停止，松开继续
-					if (Keyboard.current[otherKey].isPressed)
-					{
-						ModBehaviour.Logger.Log($"另一个缩放键被按下，停止当前缩放");
-						await UniTask.Delay(100, DelayType.Realtime, PlayerLoopTiming.Update, token);
-						continue;
-					}
-					await UniTask.SwitchToMainThread(); // 回到主线程
-					DisplayZoom(direction);  // 执行节流缩放
-					await UniTask.Delay(75, DelayType.Realtime, PlayerLoopTiming.Update, token);
-				}
-			}
-			catch (OperationCanceledException)
-			{
-				// 正常取消：按键释放时 CancellationTokenSource.Cancel() 触发此异常
-				// 不需要处理，直接退出任务
-			}
-		}
+        /// <summary>
+        /// 取消放大按键的 UniTask 异步任务
+        /// 1. 发送取消信号给正在运行的 ZoomThrottleLoop
+        /// 2. 释放 CancellationTokenSource 资源
+        /// 3. 清空引用以便垃圾回收
+        /// </summary>
+        private static void CancelZoomIn()
+        {
+            _zoomInCTS?.Cancel();   // 发送取消信号，触发 OperationCanceledException
+            _zoomInCTS?.Dispose();  // 释放资源
+            _zoomInCTS = null;      // 清空引用
+        }
 
-		/// <summary>
-		/// 清理 Input System 相关资源
-		/// 在 Mod 禁用或销毁时调用
-		/// 1. 取消所有正在运行的缩放任务
-		/// 2. 释放 InputAction 资源
-		/// 3. 清空所有引用
-		/// </summary>
-		private static void CleanupInputSystem()
-		{
-			// 取消所有缩放任务
-			CancelZoomIn();
-			CancelZoomOut();
-			
-			// 释放 InputAction 资源（会自动取消事件绑定）
-			_toggleAction?.Dispose();
-			_zoomInAction?.Dispose();
-			_zoomOutAction?.Dispose();
-			
-			// 清空引用
-			_toggleAction = null;
-			_zoomInAction = null;
-			_zoomOutAction = null;
-		}
+        /// <summary>
+        /// 取消缩小按键的 UniTask 异步任务
+        /// </summary>
+        private static void CancelZoomOut()
+        {
+            _zoomOutCTS?.Cancel();   // 发送取消信号
+            _zoomOutCTS?.Dispose();  // 释放资源
+            _zoomOutCTS = null;      // 清空引用
+        }
 
-		/// <summary>
-		/// 更新按键绑定
-		/// 当用户修改按键配置时调用，动态更新 Input System 的绑定
-		/// 需要先禁用 InputAction，修改绑定，再重新启用
-		/// </summary>
-		private static void UpdateInputBindings()
-		{
-			// 从配置获取最新的按键绑定
-			Key _toggleKey = ModSettingManager.GetValue<Key>("MiniMapToggleKey");
-			_zoomInKey = ModSettingManager.GetValue<Key>("MiniMapZoomInKey");
-			_zoomOutKey = ModSettingManager.GetValue<Key>("MiniMapZoomOutKey");
-			// Key _toggleKey = Key.Digit9;
-			// Key _zoomInKey = Key.Equals;
-			// Key _zoomOutKey = Key.Minus;
-			
-			string? ToggleKey = Keyboard.current[_toggleKey].path;
-			string? ZoomInKey = Keyboard.current[_zoomInKey].path;
-			string? ZoomOutKey = Keyboard.current[_zoomOutKey].path;
-			
-			// 更新切换键绑定
-			if (_toggleAction != null)
-			{
-				_toggleAction.Disable();  // 必须先禁用才能修改绑定
-				_toggleAction.ApplyBindingOverride(0, ToggleKey);  // 应用新的按键绑定
-				_toggleAction.Enable();   // 重新启用
-			}
-			
-			// 更新放大键绑定
-			if (_zoomInAction != null)
-			{
-				_zoomInAction.Disable();
-				_zoomInAction.ApplyBindingOverride(0, ZoomInKey);
-				_zoomInAction.Enable();
-			}
-			
-			// 更新缩小键绑定
-			if (_zoomOutAction != null)
-			{
-				_zoomOutAction.Disable();
-				_zoomOutAction.ApplyBindingOverride(0, ZoomOutKey);
-				_zoomOutAction.Enable();
-			}
-		}
+        /// <summary>
+        /// 缩放控制的核心异步任务
+        /// 实现节流控制：0.5秒内立即缩放一次，0.5秒后每0.25秒缩放一次
+        /// 使用 CancellationToken 实现按键释放时立即停止
+        /// </summary>
+        /// <param name="direction">缩放方向：1 = 放大，-1 = 缩小</param>
+        /// <param name="token">取消令牌，按键释放时自动取消任务</param>
+        private static async UniTaskVoid ZoomThrottleLoop(int direction, CancellationToken token, Key otherKey)
+        {
+            try
+            {
+                // 阶段1：立即执行一次缩放（0.2秒内）
+                if (!Keyboard.current[otherKey].isPressed)
+                {
+                    await UniTask.SwitchToMainThread(); // 回到主线程
+                    DisplayZoom(direction);
+                }
+
+                // 等待0.2秒（使用 UniTask.Delay 而不是协程的 WaitForSeconds）
+                await UniTask.Delay(200, DelayType.Realtime, PlayerLoopTiming.Update, token);
+
+                // 阶段2：进入节流模式（0.2秒后，每0.75秒执行一次）
+                while (!token.IsCancellationRequested)
+                {
+                    // 检查另一个缩放键是否也被按下，如果同时按下则停止，松开继续
+                    if (Keyboard.current[otherKey].isPressed)
+                    {
+                        ModBehaviour.Logger.Log($"另一个缩放键被按下，停止当前缩放");
+                        await UniTask.Delay(100, DelayType.Realtime, PlayerLoopTiming.Update, token);
+                        continue;
+                    }
+                    await UniTask.SwitchToMainThread(); // 回到主线程
+                    DisplayZoom(direction);  // 执行节流缩放
+                    await UniTask.Delay(75, DelayType.Realtime, PlayerLoopTiming.Update, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // 正常取消：按键释放时 CancellationTokenSource.Cancel() 触发此异常
+                // 不需要处理，直接退出任务
+            }
+        }
+
+        /// <summary>
+        /// 清理 Input System 相关资源
+        /// 在 Mod 禁用或销毁时调用
+        /// 1. 取消所有正在运行的缩放任务
+        /// 2. 释放 InputAction 资源
+        /// 3. 清空所有引用
+        /// </summary>
+        private static void CleanupInputSystem()
+        {
+            // 取消所有缩放任务
+            CancelZoomIn();
+            CancelZoomOut();
+
+            // 释放 InputAction 资源（会自动取消事件绑定）
+            _toggleAction?.Dispose();
+            _zoomInAction?.Dispose();
+            _zoomOutAction?.Dispose();
+
+            // 清空引用
+            _toggleAction = null;
+            _zoomInAction = null;
+            _zoomOutAction = null;
+        }
+
+        /// <summary>
+        /// 更新按键绑定
+        /// 当用户修改按键配置时调用，动态更新 Input System 的绑定
+        /// 需要先禁用 InputAction，修改绑定，再重新启用
+        /// </summary>
+        private static void UpdateInputBindings()
+        {
+            // 从配置获取最新的按键绑定
+            Key _toggleKey = ModSettingManager.GetValue<Key>("MiniMapToggleKey");
+            _zoomInKey = ModSettingManager.GetValue<Key>("MiniMapZoomInKey");
+            _zoomOutKey = ModSettingManager.GetValue<Key>("MiniMapZoomOutKey");
+            // Key _toggleKey = Key.Digit9;
+            // Key _zoomInKey = Key.Equals;
+            // Key _zoomOutKey = Key.Minus;
+
+            string? ToggleKey = Keyboard.current[_toggleKey].path;
+            string? ZoomInKey = Keyboard.current[_zoomInKey].path;
+            string? ZoomOutKey = Keyboard.current[_zoomOutKey].path;
+
+            // 更新切换键绑定
+            if (_toggleAction != null)
+            {
+                _toggleAction.Disable();  // 必须先禁用才能修改绑定
+                _toggleAction.ApplyBindingOverride(0, ToggleKey);  // 应用新的按键绑定
+                _toggleAction.Enable();   // 重新启用
+            }
+
+            // 更新放大键绑定
+            if (_zoomInAction != null)
+            {
+                _zoomInAction.Disable();
+                _zoomInAction.ApplyBindingOverride(0, ZoomInKey);
+                _zoomInAction.Enable();
+            }
+
+            // 更新缩小键绑定
+            if (_zoomOutAction != null)
+            {
+                _zoomOutAction.Disable();
+                _zoomOutAction.ApplyBindingOverride(0, ZoomOutKey);
+                _zoomOutAction.Enable();
+            }
+        }
     }
 }

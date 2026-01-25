@@ -27,37 +27,10 @@ namespace MiniMap.Patchers
             if (poi == null) return false;
             if (poi is CharacterPoiBase characterPoi)
             {
-                return characterPoi.WillShow(__instance == CustomMinimapManager.OriginalMinimapDisplay);
+                return characterPoi.WillShow(__instance == MinimapManager.OriginalDisplay);
             }
             return true;
         }
-
-        //[MethodPatcher("HandlePointsOfInterests", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
-        //public static bool HandlePointsOfInterestsPrefix(MiniMapDisplay __instance, PrefabPool<PointOfInterestEntry> ___PointOfInterestEntryPool)
-        //{
-        //    try
-        //    {
-        //        if (___PointOfInterestEntryPool == null) { return false; }
-        //        foreach (PointOfInterestEntry entry in ___PointOfInterestEntryPool.ActiveEntries.ToArray())
-        //        {
-        //            if (entry.Target == null || !PointsOfInterests.Points.Contains(entry.Target))
-        //                ___PointOfInterestEntryPool.Release(entry);
-        //        }
-        //        foreach (MonoBehaviour monoBehaviour in PointsOfInterests.Points)
-        //        {
-        //            if (monoBehaviour != null && !___PointOfInterestEntryPool.ActiveEntries.Any(s => s.Target == monoBehaviour))
-        //            {
-        //                AssemblyOption.InvokeMethod(__instance, "HandlePointOfInterest", new object[] { monoBehaviour });
-        //            }
-        //        }
-        //        return false;
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        ModBehaviour.Logger.LogError($"处理小地图兴趣点时出错：" + e.ToString());
-        //        return true;
-        //    }
-        //}
 
         [MethodPatcher("SetupRotation", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static bool SetupRotationPrefix(MiniMapDisplay __instance)

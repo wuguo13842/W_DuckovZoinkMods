@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using Unity.VisualScripting;
 using UnityEngine;
+using ZoinkModdingLibrary.Patcher;
 
 namespace MiniMap.Poi
 {
@@ -144,7 +145,7 @@ namespace MiniMap.Poi
 
                     }, () =>
                     {
-                        CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
+                        MinimapManager.MinimapDisplay.InvokeMethod("HandlePointsOfInterests");
                     });
                     break;
             }

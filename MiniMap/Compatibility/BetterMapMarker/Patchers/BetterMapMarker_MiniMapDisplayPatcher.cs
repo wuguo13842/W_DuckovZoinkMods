@@ -23,7 +23,7 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
             if (poi is SimplePointOfInterest pointOfInterest && poi.name.StartsWith("LootboxMarker:"))
             {
                 pointOfInterest.ScaleFactor = ModSettingManager.GetValue("betterMapMarker.poiScaleFactor", 1.0f);
-                if (__instance == CustomMinimapManager.DuplicatedMinimapDisplay)
+                if (__instance == MinimapManager.MinimapDisplay)
                     return ModSettingManager.GetValue("betterMapMarker.showInMiniMap", false);
             }
             return true;
@@ -52,7 +52,7 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
             {
                 case "betterMapMarker.poiScaleFactor":
                 case "betterMapMarker.showInMiniMap":
-                    CustomMinimapManager.CallDisplayMethod("HandlePointsOfInterests");
+                    MinimapManager.MinimapDisplay.InvokeMethod("HandlePointsOfInterests");
                     break;
             }
         }

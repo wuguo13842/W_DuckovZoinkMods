@@ -123,7 +123,7 @@ namespace MiniMap
         {
             try
             {
-                CustomMinimapManager.Initialize();
+                MinimapManager.Initialize();
                 ApplyHarmonyPatchers();
                 ModManager.OnModActivated += ModManager_OnModActivated;
                 LevelManager.OnEvacuated += OnEvacuated;
@@ -143,7 +143,7 @@ namespace MiniMap
 
         void OnEvacuated(EvacuationInfo _info)
         {
-            CustomMinimapManager.Hide();
+            MinimapManager.Hide();
         }
 
         void OnDisable()
@@ -156,7 +156,7 @@ namespace MiniMap
                 //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
 				SceneLoader.onStartedLoadingScene -= ModSettingManager.OnLoadingCreateUI;
-                CustomMinimapManager.Destroy();
+                MinimapManager.Destroy();
                 Logger.Log($"disable mod {MOD_NAME}");
             }
             catch (Exception e)
@@ -187,7 +187,7 @@ namespace MiniMap
             try
             {
                 // if (ModSettingManager.needUpdate)  ModSettingManager.Update();
-                CustomMinimapManager.Update();
+                MinimapManager.Update();
                 // CustomMinimapManager.CheckToggleKey();
                 //PoiManager.Update();
             }

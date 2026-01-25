@@ -18,12 +18,12 @@ namespace MiniMap.Managers
 
         public static void OnEnable()
         {
-            CustomMinimapManager.MiniMapApplied += OnMiniMapApplied;
+            MinimapManager.MiniMapApplied += OnMiniMapApplied;
         }
 
         public static void OnDisable()
         {
-            CustomMinimapManager.MiniMapApplied -= OnMiniMapApplied;
+            MinimapManager.MiniMapApplied -= OnMiniMapApplied;
         }
 
         private static void OnMiniMapApplied()
@@ -36,7 +36,7 @@ namespace MiniMap.Managers
 
         public static void CreatePrefab()
         {
-            if (CustomMinimapManager.OriginalMinimapDisplay == null)
+            if (MinimapManager.OriginalDisplay == null)
             {
                 return;
             }
@@ -44,7 +44,7 @@ namespace MiniMap.Managers
 
             GameObject prefabObj = new("CharacterPoiEntry");
             RectTransform prefabRect = prefabObj.AddComponent<RectTransform>();
-            prefabRect.SetParent(CustomMinimapManager.OriginalMinimapDisplay.transform);
+            prefabRect.SetParent(MinimapManager.OriginalDisplay.transform);
             prefabRect.sizeDelta = new Vector2(100f, 100f);
             prefabRect.localPosition = Vector3.zero;
 
