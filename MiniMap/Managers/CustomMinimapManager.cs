@@ -17,6 +17,7 @@ using UnityEngine.UI;
 using UnityEngine.UI.ProceduralImage;
 using ZoinkModdingLibrary.GameUI;
 using ZoinkModdingLibrary.Patcher;
+using MiniMap.Extentions;
 
 namespace MiniMap.Managers
 {
@@ -80,6 +81,12 @@ namespace MiniMap.Managers
             ModSettingManager.ButtonClicked += OnButtonClicked;
             SceneManager.sceneLoaded += OnSceneLoaded;
 
+            // 一次性订阅所有事件
+            MiniMapApplied += OnMiniMapApplied;
+            PointsOfInterests.OnPointRegistered += OnPOIRegistered;
+            PointsOfInterests.OnPointUnregistered += OnPOIUnregistered;
+            arePOIEventsSubscribed = true;
+
             IsInitialized = true;
         }
 
@@ -92,6 +99,15 @@ namespace MiniMap.Managers
             ModSettingManager.ConfigChanged -= OnConfigChanged;
             ModSettingManager.ButtonClicked -= OnButtonClicked;
             SceneManager.sceneLoaded -= OnSceneLoaded;
+
+            // 清理所有事件订阅
+            MiniMapApplied -= OnMiniMapApplied;
+            if (arePOIEventsSubscribed)
+            {
+                PointsOfInterests.OnPointRegistered -= OnPOIRegistered;
+                PointsOfInterests.OnPointUnregistered -= OnPOIUnregistered;
+                arePOIEventsSubscribed = false;
+            }
 
             IsInitialized = false;
         }
@@ -935,6 +951,111 @@ namespace MiniMap.Managers
                 _zoomOutAction.ApplyBindingOverride(0, ZoomOutKey);
                 _zoomOutAction.Enable();
             }
+        }
+
+        // ============ 新增的事件驱动材质修复方法 ============
+
+        // 新增的材质修复相关字段
+        private static bool arePOIEventsSubscribed = false;
+
+        /// <summary>
+        /// 小地图创建后的回调
+        /// </summary>
+        private static void OnMiniMapApplied()
+        {
+            ModBehaviour.Logger.Log("小地图已创建，立即修复材质");
+            FixAllMaterialsOnce();
+        }
+
+        /// <summary>
+        /// POI注册时的回调
+        /// </summary>
+        private static void OnPOIRegistered(MonoBehaviour poi)
+        {
+            // 使用防抖机制，延迟修复材质
+            ModBehaviour.Instance?.ExecuteWithDebounce(() => 
+            {
+                if (HasMap())
+                {
+                    ModBehaviour.Logger.Log("POI变化，延迟修复材质");
+                    FixAllMaterialsOnce();
+                }
+            }, null);
+        }
+
+        /// <summary>
+        /// POI注销时的回调
+        /// </summary>
+        private static void OnPOIUnregistered(MonoBehaviour poi)
+        {
+            // 同样使用防抖机制
+            ModBehaviour.Instance?.ExecuteWithDebounce(() => 
+            {
+                if (HasMap())
+                {
+                    ModBehaviour.Logger.Log("POI移除，延迟修复材质");
+                    FixAllMaterialsOnce();
+                }
+            }, null);
+        }
+
+        /// <summary>
+        /// 修复小地图所有材质（一次性）
+        /// </summary>
+		public static void FixAllMaterialsOnce()
+		{
+			try
+			{
+				if (minimapDisplay == null)
+				{
+					ModBehaviour.Logger.LogWarning("无法修复材质：minimapDisplay为空");
+					return;
+				}
+
+				int fixedCount = 0;
+				
+				// 修复所有Image组件的材质（最简单直接）
+				var allImages = minimapDisplay.GetComponentsInChildren<Image>(true);
+				foreach (var image in allImages)
+				{
+					if (ShouldFixMaterial(image))
+					{
+						image.material = null;
+						fixedCount++;
+					}
+				}
+
+				if (fixedCount > 0)
+				{
+					ModBehaviour.Logger.Log($"修复了 {fixedCount} 个材质");
+				}
+			}
+			catch (Exception e)
+			{
+				ModBehaviour.Logger.LogError($"修复材质时发生错误: {e.Message}");
+			}
+		}
+
+        /// <summary>
+        /// 判断材质是否需要修复
+        /// </summary>
+        private static bool ShouldFixMaterial(Image image)
+        {
+            if (image.material == null)
+                return false;
+                
+            string materialName = image.material.name;
+            string shaderName = image.material.shader?.name ?? "";
+            
+            // 需要修复的情况：
+            // 1. 材质名为"MapSprite"
+            // 2. 使用Shapes系统的Shader
+            // 3. 使用粒子系统的Shader
+            // 4. 是克隆的材质
+            return materialName.Contains("MapSprite") || 
+                   shaderName.Contains("Shapes/") ||
+                   shaderName.Contains("Particles/") ||
+                   materialName.Contains("(Clone)");
         }
     }
 }
