@@ -1,4 +1,5 @@
-﻿using LeTai.TrueShadow;
+﻿using Duckov.Scenes;
+using LeTai.TrueShadow;
 using MiniMap.Poi;
 using System.Reflection;
 using TMPro;
@@ -144,7 +145,8 @@ namespace Duckov.MiniMaps.UI
             try
             {
                 cachedWorldPosition = target.transform.position;
-                Vector3 centerOfObjectScene = (Vector3)typeof(MiniMapCenter).GetMethod("GetCenterOfObjectScene", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { target });
+				// 直接使用缓存的场景中心点 替代反射调用
+                // Vector3 centerOfObjectScene = (Vector3)typeof(MiniMapCenter).GetMethod("GetCenterOfObjectScene", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { target });
                 Vector3 vector = target.transform.position - centerOfObjectScene;
                 Vector3 point = new Vector2(vector.x, vector.z);
                 Vector3 position = minimapEntry.transform.localToWorldMatrix.MultiplyPoint(point);
@@ -184,6 +186,44 @@ namespace Duckov.MiniMaps.UI
         private void UpdateRotation()
         {
             base.transform.rotation = Quaternion.identity;
+        }
+		
+		// ==================== 新增的 事件获取场景地图中心点 方法 ====================
+		
+        // 添加静态字段存储当前场景中心点
+        private static Vector3 centerOfObjectScene = Vector3.zero;
+
+        /// <summary>
+        /// 设置当前场景中心点（在onFinishedLoadingScene事件中调用）
+        /// </summary>
+        public static void SetCurrentSceneCenter(SceneLoadingContext context)
+        {
+            if (string.IsNullOrEmpty(context.sceneName)) return;
+            
+            // 直接使用公共属性获取场景中心点
+            centerOfObjectScene = GetSceneCenterFromSettings(context.sceneName);
+        }
+		
+        /// <summary>
+        /// 从MiniMapSettings获取场景中心点（使用公共属性）
+        /// </summary>
+        private static Vector3 GetSceneCenterFromSettings(string sceneID)
+        {
+            var settings = MiniMapSettings.Instance;
+            if (settings == null) return Vector3.zero;
+            
+            // 直接访问public的maps列表
+            foreach (var mapEntry in settings.maps)
+            {
+                // 直接访问public的sceneID和mapWorldCenter字段
+                if (mapEntry.sceneID == sceneID)
+                {
+                    return mapEntry.mapWorldCenter;
+                }
+            }
+            
+            // 没找到则使用合并中心点（也是public的）
+            return settings.combinedCenter;
         }
     }
 }

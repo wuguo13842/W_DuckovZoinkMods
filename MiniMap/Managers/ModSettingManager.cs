@@ -464,7 +464,7 @@ namespace MiniMap.Managers
             return options.Count > 0 ? options[index] : string.Empty;
         }
 
-		public static void OnLoadingCreateUI(SceneLoadingContext context)
+		public static void OnLoadingCreateUI()
 		{
 			if (needUpdate) CreateUI();
 		}
