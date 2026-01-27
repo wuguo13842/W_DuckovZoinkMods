@@ -208,9 +208,11 @@ namespace MiniMap
 		private static void onFinishedLoadingScene(SceneLoadingContext context)
 		{
 			ModSettingManager.OnLoadingCreateUI();
+			
+            if (string.IsNullOrEmpty(context.sceneName)) return;
                 
 			// 预加载场景中心点（触发缓存填充）
-			Duckov.MiniMaps.UI.CharacterPoiEntry.SetCurrentSceneCenter(context);
+			Duckov.MiniMaps.UI.CharacterPoiEntry.GetSceneCenterFromSettings(context.sceneName);
 		}
     }
 }

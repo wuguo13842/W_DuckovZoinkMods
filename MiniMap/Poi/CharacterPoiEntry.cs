@@ -159,6 +159,7 @@ namespace Duckov.MiniMaps.UI
 
         private void Update()
         {
+			if (target == null || !target.gameObject.activeSelf) return;
             UpdateScale();
             UpdatePosition();
             UpdateRotation();
@@ -195,22 +196,16 @@ namespace Duckov.MiniMaps.UI
 
         /// <summary>
         /// 设置当前场景中心点（在onFinishedLoadingScene事件中调用）
+		/// 从MiniMapSettings获取场景中心点（使用公共属性）
         /// </summary>
-        public static void SetCurrentSceneCenter(SceneLoadingContext context)
+        public static void GetSceneCenterFromSettings(string sceneID)
         {
-            if (string.IsNullOrEmpty(context.sceneName)) return;
-            
-            // 直接使用公共属性获取场景中心点
-            centerOfObjectScene = GetSceneCenterFromSettings(context.sceneName);
-        }
-		
-        /// <summary>
-        /// 从MiniMapSettings获取场景中心点（使用公共属性）
-        /// </summary>
-        private static Vector3 GetSceneCenterFromSettings(string sceneID)
-        {
-            var settings = MiniMapSettings.Instance;
-            if (settings == null) return Vector3.zero;
+			var settings = MiniMapSettings.Instance;
+            if (settings == null)
+			{
+				centerOfObjectScene = Vector3.zero;
+				return;
+			}
             
             // 直接访问public的maps列表
             foreach (var mapEntry in settings.maps)
@@ -218,12 +213,13 @@ namespace Duckov.MiniMaps.UI
                 // 直接访问public的sceneID和mapWorldCenter字段
                 if (mapEntry.sceneID == sceneID)
                 {
-                    return mapEntry.mapWorldCenter;
+					centerOfObjectScene =  mapEntry.mapWorldCenter;
+                    return;
                 }
             }
             
             // 没找到则使用合并中心点（也是public的）
-            return settings.combinedCenter;
+			centerOfObjectScene = settings.combinedCenter;
         }
     }
 }
