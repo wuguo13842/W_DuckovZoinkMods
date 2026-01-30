@@ -31,7 +31,7 @@ namespace MiniMap.Managers
         private static float northFontSize = 18f;
 
         public static float MapBorderEulerZRotation = 0f;
-        public static Vector2 displayZoomRange = new Vector2(0.1f, 30f);
+        public static Vector2 displayZoomRange = new Vector2(0.25f, 4f);
 
         public static Color backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
 
@@ -222,8 +222,7 @@ namespace MiniMap.Managers
                 return;
 
             float displayZoomScale = ModSettingManager.GetValue<float>("displayZoomScale");
-            float miniMapZoomStep = ModSettingManager.GetValue<float>("miniMapZoomStep");
-            displayZoomScale += symbol * miniMapZoomStep;
+            displayZoomScale += symbol * 0.1f;
             displayZoomScale = Mathf.Clamp(displayZoomScale, displayZoomRange.x, displayZoomRange.y);
             ModSettingManager.SaveValue("displayZoomScale", displayZoomScale, true);
             UpdateDisplayZoom();
@@ -859,7 +858,7 @@ namespace MiniMap.Managers
                     }
                     await UniTask.SwitchToMainThread(); // 回到主线程
                     DisplayZoom(direction);  // 执行节流缩放
-                    await UniTask.Delay(75, DelayType.Realtime, PlayerLoopTiming.Update, token);
+                    await UniTask.Delay(20, DelayType.Realtime, PlayerLoopTiming.Update, token);
                 }
             }
             catch (OperationCanceledException)

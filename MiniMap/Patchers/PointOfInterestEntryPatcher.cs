@@ -29,103 +29,162 @@ public static bool UpdateScalePrefix(
     Transform ___iconContainer,
     ProceduralImage ___areaDisplay,
     float ___areaLineThickness,
-    // Harmony会自动注入这些字段！
-    TextMeshProUGUI ___displayName      // displayName字段
+    TextMeshProUGUI ___displayName
 )
 {
     try
     {
-        float d = ___pointOfInterest?.ScaleFactor ?? 1f;
+        if (___pointOfInterest == null) return true;
         
-        // 判断当前显示的是系统地图还是Mod地图
         bool isInMiniMap = ___master == MinimapManager.MinimapDisplay;
+        bool isCharacterPoi = ___pointOfInterest is CharacterPoiBase;
+        float displayZoomScale = ModSettingManager.GetValue("displayZoomScale", 5f);
         
-        // 如果是CharacterPoiBase（包括位置图标和方向箭头）
-        if (___pointOfInterest is CharacterPoiBase characterPoi)
+        // 获取父对象缩放
+        float parentLocalScale = __instance.transform.parent.localScale.x;
+        
+        // 处理图标缩放
+        float d = ___pointOfInterest.ScaleFactor;
+        if (isCharacterPoi)
         {
-            // 判断是否是中心图标（玩家自己的图标）
-            bool isCenterIcon = characterPoi.CharacterType == CharacterType.Main;
-            
-            if (isCenterIcon)
+            CharacterPoiBase characterPoi = ___pointOfInterest as CharacterPoiBase;
+            d = characterPoi?.IconSize ?? d;
+        }
+        
+        var baseScale = Vector3.one * (d / parentLocalScale);
+        
+        // ============ 统一处理逻辑 ============
+        if (isInMiniMap) // 小地图
+        {
+            if (!isCharacterPoi) // 场景片区名字
             {
-                // 中心图标：区分小地图和系统地图
-                if (isInMiniMap)
+                // 显示名称处理
+                bool shouldShowName = displayZoomScale >= 0.4f;
+                if (___displayName != null)
                 {
-                    // 在小地图中：使用 miniMapCenterIconSize 配置
-                    d = characterPoi.ScaleFactor * ModSettingManager.GetValue("miniMapCenterIconSize", 1.0f);
-                }
-                else
-                {
-                    // 在系统地图中：使用原始大小
-                    d = characterPoi.ScaleFactor;
-                }
-            }
-            else
-            {
-                // 根据角色类型获取对应的图标大小配置
-                float iconSizeFactor = 1.0f;
-                switch (characterPoi.CharacterType)
-                {
-                    case CharacterType.Pet:
-                        iconSizeFactor = ModSettingManager.GetValue("petIconSize", 0.8f);
-                        break;
-                    case CharacterType.Boss:
-                        iconSizeFactor = ModSettingManager.GetValue("bossIconSize", 1.2f);
-                        break;
-                    case CharacterType.Enemy:
-                    case CharacterType.NPC:
-                    case CharacterType.Neutral:
-                        iconSizeFactor = ModSettingManager.GetValue("enemyIconSize", 1.0f);
-                        break;
+                    ___displayName.gameObject.SetActive(shouldShowName);
+                    if (shouldShowName)
+                    {
+                        ___displayName.transform.localScale = Vector3.one * 1.5f;
+                    }
                 }
                 
-                d = characterPoi.ScaleFactor * iconSizeFactor;
+                // 图标容器处理
+                if (___iconContainer != null)
+                {
+                    ___iconContainer.gameObject.SetActive(true);
+                    if (shouldShowName)
+                    {
+                        ___iconContainer.localScale = baseScale / 2.5f;
+                    }
+                    else
+                    {
+                        ___iconContainer.localScale = baseScale / 1.7f;
+                    }
+                }
             }
-        }
-        
-        // ============ 应用小地图全局调节因子 ============
-        if (isInMiniMap)
-        {
-            // 只在小地图中应用全局调节因子
-            float globalFactor = ModSettingManager.GetValue("miniMapGlobalSize", 1.0f);
-            d *= globalFactor;
-        }
-        // ============ 应用结束 ============
-        
-        float parentLocalScale = __instance.transform.parent.localScale.x;
-        var baseScale = Vector3.one * d / parentLocalScale;
-        
-        // ============ 关键：处理显示名称缩放问题 ============
-        // 现在可以直接使用 ___displayName，不需要反射！
-        
-        // 1. 应用图标缩放
-        ___iconContainer.localScale = baseScale;
-        
-        // 2. 处理显示名称：使其不受图标缩放影响
-        if (___displayName != null && ___displayName.transform != null)
-        {
-            // 检查显示名称是否在 iconContainer 内
-            bool isInIconContainer = ___displayName.transform.IsChildOf(___iconContainer);
-            
-            if (isInIconContainer)
+            else // 角色POI
             {
-				___displayName.transform.localScale = Vector3.one  / d;
+                CharacterPoiBase characterPoi = ___pointOfInterest as CharacterPoiBase;
+                if (characterPoi != null && ___iconContainer != null && ___displayName != null)
+                {
+                    CharacterType type = characterPoi.CharacterType;
+                    bool isCenterIcon = characterPoi.CharacterType == CharacterType.Main;
+                    
+                    // 图标容器显示/隐藏
+                    if (type == CharacterType.Enemy || type == CharacterType.NPC || type == CharacterType.Neutral)
+                    {
+                        ___iconContainer.gameObject.SetActive(displayZoomScale >= 0.8f);
+                    }
+                    else
+                    {
+                        ___iconContainer.gameObject.SetActive(true);
+                    }
+                    
+                    // 显示名称处理
+                    if (isCenterIcon)
+                    {
+                        ___displayName.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        bool shouldShowName = displayZoomScale >= 1.5f;
+                        ___displayName.gameObject.SetActive(shouldShowName);
+                        if (shouldShowName)
+                        {
+                            ___displayName.transform.localScale = Vector3.one * 2.0f;
+                        }
+                    }
+                    
+                    // 图标缩放
+                    ___iconContainer.localScale = baseScale;
+                }
             }
         }
-        // ============ 处理结束 ============
+        else // 大地图
+        {
+            if (!isCharacterPoi) // 场景片区名字
+            {
+                if (___displayName != null)
+                {
+                    ___displayName.gameObject.SetActive(true);
+                    ___displayName.transform.localScale = Vector3.one;
+                }
+                if (___iconContainer != null)
+                {
+                    ___iconContainer.gameObject.SetActive(true);
+                    ___iconContainer.localScale = baseScale;
+                }
+            }
+            else // 角色POI
+            {
+                CharacterPoiBase characterPoi = ___pointOfInterest as CharacterPoiBase;
+                if (characterPoi != null && ___iconContainer != null && ___displayName != null)
+                {
+                    bool isCenterIcon = characterPoi.CharacterType == CharacterType.Main;
+                    
+                    // 显示名称处理
+                    if (isCenterIcon)
+                    {
+                        ___displayName.gameObject.SetActive(true);
+                        ___displayName.transform.localScale = Vector3.one;
+                    }
+                    else
+                    {
+                        ___displayName.gameObject.SetActive(true);
+                        ___displayName.transform.localScale = Vector3.one * 2.0f;
+                    }
+                    
+                    // 图标容器始终显示
+                    ___iconContainer.gameObject.SetActive(true);
+                    
+                    // 图标缩放（中心图标放大2.5倍）
+                    if (isCenterIcon)
+                    {
+                        ___iconContainer.localScale = baseScale * 2.5f;
+                    }
+                    else
+                    {
+                        ___iconContainer.localScale = baseScale;
+                    }
+                }
+            }
+        }
+        // ============ 逻辑结束 ============
         
-        if (___pointOfInterest != null && ___pointOfInterest.IsArea)
+        // 处理区域显示
+        if (___pointOfInterest.IsArea)
         {
             ___areaDisplay.BorderWidth = ___areaLineThickness / parentLocalScale;
             ___areaDisplay.FalloffDistance = 1f / parentLocalScale;
         }
 
-        return false; // 跳过原始方法
+        return false;
     }
     catch (Exception e)
     {
         ModBehaviour.Logger.LogError($"UpdateScalePrefix failed: {e.Message}");
-        return true; // 执行原始方法
+        return true;
     }
 }
 
@@ -161,7 +220,7 @@ public static bool UpdateScalePrefix(
                 GameObject.Destroy(__instance.gameObject);
                 return false;
             }
-            //if (___master == CustomMinimapManager.DuplicatedMinimapDisplay && !(__instance.Target?.gameObject.activeInHierarchy ?? false))
+            //if (___master == MinimapManager.MinimapDisplay && !(__instance.Target?.gameObject.activeInHierarchy ?? false))
             //{
             //    return false;
             //}

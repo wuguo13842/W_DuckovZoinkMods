@@ -103,9 +103,9 @@ namespace MiniMap.Utils
                 if (character.IsMainCharacter)
                 {
                     characterType = CharacterType.Main;
-                    scaleFactor = 1f;
+                    scaleFactor = 1f;  //中心图标 大小地图一起 （不包括文字 和 与文字间距）
                 }
-                characterPoi.ScaleFactor = scaleFactor;
+                characterPoi.ScaleFactor = scaleFactor / 2.5f;  // characterPoi 大小地图一起 只角色(全部) 位置图标 、名字文字、文字间距
                 if (originPoi == null)
                 {
                     characterPoi.Setup(icon, character, characterType, preset?.nameKey, followActiveScene: true);
@@ -128,7 +128,7 @@ namespace MiniMap.Utils
             {
                 Sprite? icon = ModFileOperations.LoadSprite("CharactorDirection.png");
                 directionPoi.BaseEulerAngle = 45f;
-                directionPoi.ScaleFactor = scaleFactor;
+                directionPoi.ScaleFactor = scaleFactor / 2.5f;  // directionPoi 大小地图一起 只角色全部 箭头（不包括文字 和 与文字间距）
                 directionPoi.Setup(icon, character, characterType, cachedName: preset?.DisplayName, followActiveScene: true);
             }
         }
