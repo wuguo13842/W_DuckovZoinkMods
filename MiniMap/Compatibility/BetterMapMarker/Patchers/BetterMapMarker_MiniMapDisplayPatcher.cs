@@ -1,5 +1,6 @@
 ﻿using Duckov.MiniMaps;
 using Duckov.MiniMaps.UI;
+using Duckov.Modding;
 using MiniMap.Managers;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,10 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.Extentions;
+using ZoinkModdingLibrary.ModSettings;
 using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Compatibility.BetterMapMarker.Patchers
 {
@@ -22,9 +26,9 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
         {
             if (poi is SimplePointOfInterest pointOfInterest && poi.name.StartsWith("LootboxMarker:"))
             {
-                pointOfInterest.ScaleFactor = ModSettingManager.GetValue("betterMapMarker.poiScaleFactor", 1.0f);
+                pointOfInterest.ScaleFactor = ModSettingManager.GetValue(ModBehaviour.ModInfo, "betterMapMarker.poiScaleFactor", 1.0f);
                 if (__instance == MinimapManager.MinimapDisplay)
-                    return ModSettingManager.GetValue("betterMapMarker.showInMiniMap", false);
+                    return ModSettingManager.GetValue(ModBehaviour.ModInfo, "betterMapMarker.showInMiniMap", false);
             }
             return true;
         }
@@ -46,8 +50,9 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
             ModSettingManager.ConfigChanged -= OnConfigChanged;
         }
 
-        private void OnConfigChanged(string key, object value)
+        private void OnConfigChanged(ModInfo modInfo, string key, object? value)
         {
+            if (modInfo.ModIdEquals(ModBehaviour.Instance!.info)) return;
             switch (key)
             {
                 case "betterMapMarker.poiScaleFactor":

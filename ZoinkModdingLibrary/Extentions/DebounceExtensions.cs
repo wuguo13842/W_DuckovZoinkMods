@@ -2,7 +2,7 @@
 using System.Collections;
 using UnityEngine;
 
-namespace MiniMap.Extentions
+namespace ZoinkModdingLibrary.Extentions
 {
     public static class DebounceExtensions
     {

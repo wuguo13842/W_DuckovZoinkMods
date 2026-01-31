@@ -11,6 +11,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using ZoinkModdingLibrary;
+using ZoinkModdingLibrary.Logging;
 using ZoinkModdingLibrary.Patcher;
 
 namespace BetterModUpload
@@ -30,7 +31,6 @@ namespace BetterModUpload
         private TextMeshProUGUI? ignoredFilesInfoTitle { get; set; }
         public TextMeshProUGUI? ignoredFilesInfo { get; private set; }
         public static ModBehaviour? Instance => instance;
-        public static ModLogger Logger { get; } = new ModLogger(MOD_NAME);
         public static Harmony Harmony { get; } = new Harmony(MOD_ID);
 
         private List<PatcherBase> patchers = new List<PatcherBase>
@@ -42,7 +42,7 @@ namespace BetterModUpload
         {
             if (Instance != null)
             {
-                Logger.LogError("ModBehaviour 已实例化");
+                Log.Error("ModBehaviour 已实例化");
                 return;
             }
             instance = this;
@@ -51,10 +51,10 @@ namespace BetterModUpload
 
         private void OnEnable()
         {
-            Logger.Log("Patching...");
+            Log.Info("Patching...");
             foreach (var patcher in patchers)
             {
-                patcher.Setup(Harmony, Logger).Patch();
+                patcher.Setup(Harmony).Patch();
             }
             //Initialize();
             SceneManager.sceneLoaded += OnSceneLoaded;
@@ -71,7 +71,7 @@ namespace BetterModUpload
 
         private void OnDisable()
         {
-            Logger.LogError("Unpatching...");
+            Log.Error("Unpatching...");
             foreach (var patcher in patchers)
             {
                 patcher.Unpatch();
@@ -98,7 +98,7 @@ namespace BetterModUpload
             }
 
             //根节点
-            Logger.LogWarning("正在创建上传文件列表");
+            Log.Warning("正在创建上传文件列表");
             filesInfoRootObj = new GameObject("FilesToUpload");
             filesInfoRootObj.transform.SetParent(extraInfo);
             filesInfoRootObj.transform.SetSiblingIndex(2);
@@ -153,7 +153,7 @@ namespace BetterModUpload
             ignoredFilesInfo.fontSize = 16f;
             ignoredFilesInfo.fontStyle = FontStyles.Strikethrough;
 
-            Logger.LogWarning("上传文件列表创建成功");
+            Log.Warning("上传文件列表创建成功");
             inited = true;
         }
     }

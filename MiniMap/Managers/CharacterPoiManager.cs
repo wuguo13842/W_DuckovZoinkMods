@@ -15,7 +15,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UI.ProceduralImage;
 using ZoinkModdingLibrary.GameUI;
-using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Logging;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Managers
 {
@@ -125,14 +126,14 @@ namespace MiniMap.Managers
             MiniMapDisplay? display = isOriginalMap ? MinimapManager.OriginalDisplay : MinimapManager.MinimapDisplay;
             if (pool == null || display == null)
             {
-                ModBehaviour.Logger.LogError($"CharacterPoiEntryPool:{pool?.ToString() ?? "null"}, MinimapDisplay: {display?.ToString() ?? "null"}");
+                Log.Error($"CharacterPoiEntryPool:{pool?.ToString() ?? "null"}, MinimapDisplay: {display?.ToString() ?? "null"}");
                 return;
             }
-            ModBehaviour.Logger.Log($"正在创建标记点: {display.name}");
-            //if (!poi.WillShow(isOriginalMap))
-            //{
-            //    return;
-            //}
+            if (!poi.WillShow(isOriginalMap))
+            {
+                return;
+            }
+            Log.Info($"正在创建标记点: {display.name}");
             int targetSceneIndex = poi.OverrideScene >= 0 ? poi.OverrideScene : poi.gameObject.scene.buildIndex;
 
             if (MultiSceneCore.ActiveSubScene.HasValue && targetSceneIndex == MultiSceneCore.ActiveSubScene.Value.buildIndex)
@@ -140,27 +141,27 @@ namespace MiniMap.Managers
                 PrefabPool<MiniMapDisplayEntry>? mapEntryPool = display.GetProperty<PrefabPool<MiniMapDisplayEntry>>("MapEntryPool");
                 if (mapEntryPool == null)
                 {
-                    ModBehaviour.Logger.LogError("MapEntryPool 为空");
+                    Log.Error("MapEntryPool 为空");
                     return;
                 }
 
                 MiniMapDisplayEntry miniMapDisplayEntry = mapEntryPool.ActiveEntries.FirstOrDefault(e => e.SceneReference != null && e.SceneReference.BuildIndex == targetSceneIndex);
                 if (miniMapDisplayEntry == null || miniMapDisplayEntry.Hide)
                 {
-                    ModBehaviour.Logger.LogError($"MiniMapDisplayEntry: {miniMapDisplayEntry?.ToString() ?? "null"}, Hide: {miniMapDisplayEntry?.Hide}");
+                    Log.Error($"MiniMapDisplayEntry: {miniMapDisplayEntry?.ToString() ?? "null"}, Hide: {miniMapDisplayEntry?.Hide}");
                     return;
                 }
                 pool.Get().Setup(display, poi, miniMapDisplayEntry);
             }
             else
             {
-                ModBehaviour.Logger.LogError($"目标场景不匹配：Target: {targetSceneIndex}, Active: {MultiSceneCore.ActiveSubScene?.buildIndex}");
+                Log.Error($"目标场景不匹配：Target: {targetSceneIndex}, Active: {MultiSceneCore.ActiveSubScene?.buildIndex}");
             }
         }
 
         public static void ReleasePointOfInterest(CharacterPoiBase poi, bool isOriginalMap)
         {
-            ModBehaviour.Logger.Log("正在删除标记点");
+            Log.Info("正在删除标记点");
             PrefabPool<CharacterPoiEntry>? pool = isOriginalMap ? MapCharacterPoiEntryPool : _miniMapCharacterPoiEntryPool;
             if (pool == null) return;
             CharacterPoiEntry pointOfInterestEntry = pool.ActiveEntries.FirstOrDefault(e => e != null && e.Target == poi);

@@ -10,6 +10,17 @@
     <CopyPath>$(DuckovPath)\Mods\$(AssemblyName)</CopyPath>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="ZoinkModdingLibrary.Logging" />
+    <AssemblyAttribute Include="LogAttribute">
+      <_Parameter1>Output</_Parameter1>
+      <_Parameter2>Output</_Parameter2>
+      <_Parameter3>Debug</_Parameter3>
+      <_Parameter4>Debug</_Parameter4>
+    </AssemblyAttribute>
+  </ItemGroup>
+  
   <ItemGroup>
     <!-- Harmony DLL -->
     <Reference Include="0Harmony">

@@ -3,6 +3,7 @@ using MiniMap.Poi;
 using MiniMap.Utils;
 using System;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.Logging;
 using ZoinkModdingLibrary.Patcher;
 
 namespace MiniMap.Patchers
@@ -23,7 +24,7 @@ namespace MiniMap.Patchers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"characterPoi add failed: {e.Message}");
+                Log.Error($"characterPoi add failed: {e.Message}");
             }
             return true;
         }

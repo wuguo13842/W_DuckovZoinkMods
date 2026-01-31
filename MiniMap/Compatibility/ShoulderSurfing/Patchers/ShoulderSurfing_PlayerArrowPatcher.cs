@@ -1,11 +1,15 @@
-﻿using MiniMap.Managers;
+﻿using Duckov.Modding;
+using MiniMap.Managers;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.Extentions;
+using ZoinkModdingLibrary.ModSettings;
 using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Compatibility.ShoulderSurfing.Patchers
 {
@@ -25,7 +29,7 @@ namespace MiniMap.Compatibility.ShoulderSurfing.Patchers
         [MethodPatcher("CreateOrGetPlayerArrow", PatchType.Postfix, BindingFlags.Static | BindingFlags.Public)]
         public static void CreateOrGetPlayerArrowPostfix(GameObject __result)
         {
-            bool show = ModSettingManager.GetValue("shoulderSurfing.showPlayerArrow", false);
+            bool show = ModSettingManager.GetValue(ModBehaviour.ModInfo, "shoulderSurfing.showPlayerArrow", false);
             __result.SetActive(show);
         }
 
@@ -45,8 +49,9 @@ namespace MiniMap.Compatibility.ShoulderSurfing.Patchers
             ModSettingManager.ConfigChanged -= OnConfigChanged;
         }
 
-        private void OnConfigChanged(string key, object value)
+        private void OnConfigChanged(ModInfo modInfo, string key, object? value)
         {
+            if (!modInfo.ModIdEquals(ModBehaviour.Instance!.info)) return;
             switch (key)
             {
                 case "shoulderSurfing.showPlayerArrow":

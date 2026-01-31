@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using ZoinkModdingLibrary.Logging;
 
 namespace ZoinkModdingLibrary.Patcher
 {
@@ -9,15 +10,15 @@ namespace ZoinkModdingLibrary.Patcher
     {
         protected virtual List<PatcherBase>? SubPatchers { get; }
 
-        public override PatcherBase Setup(Harmony? harmony, ModLogger? logger = null)
+        public override PatcherBase Setup(Harmony? harmony)
         {
-            PatcherBase result = base.Setup(harmony, logger);
+            PatcherBase result = base.Setup(harmony);
             if (SubPatchers != null)
             {
-                this.logger?.Log("初始化子补丁程序...");
+                Log.Info("初始化子补丁程序...");
                 foreach (var patcher in SubPatchers)
                 {
-                    patcher.Setup(harmony, logger);
+                    patcher.Setup(harmony);
                 }
             }
             return result;
@@ -26,10 +27,10 @@ namespace ZoinkModdingLibrary.Patcher
         public override bool Patch()
         {
             bool result = base.Patch();
-            logger?.Log($"主补丁应用完成，{result}, {SubPatchers?.Count.ToString() ?? "null"}");
+            Log.Info($"主补丁应用完成，{result}, {SubPatchers?.Count.ToString() ?? "null"}");
             if (result && SubPatchers != null)
             {
-                logger?.Log("应用子补丁程序...");
+                Log.Info("应用子补丁程序...");
                 foreach (var patcher in SubPatchers)
                 {
                     patcher.Patch();
@@ -43,7 +44,7 @@ namespace ZoinkModdingLibrary.Patcher
             base.Unpatch();
             if (SubPatchers != null)
             {
-                logger?.Log("移除子补丁程序...");
+                Log.Info("移除子补丁程序...");
                 foreach (var patcher in SubPatchers)
                 {
                     patcher.Unpatch();

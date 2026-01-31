@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.ModSettings;
 using ZoinkModdingLibrary.Patcher;
 
 namespace MiniMap.Compatibility.BetterMapMarker.Patchers
@@ -24,7 +25,7 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
             {
                 if (__instance == MinimapManager.MinimapDisplay)
                     return false;
-                pointOfInterest.ScaleFactor = ModSettingManager.GetValue("bossLiveMap.poiScaleFactor", 1.0f);
+                pointOfInterest.ScaleFactor = ModSettingManager.GetValue(ModBehaviour.ModInfo, "bossLiveMap.poiScaleFactor", 1.0f);
             }
             return true;
         }

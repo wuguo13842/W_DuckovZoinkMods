@@ -1,5 +1,5 @@
 ﻿using System;
-using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Utils;
 
 namespace ZoinkModdingLibrary.Attributes
 {
@@ -19,7 +19,7 @@ namespace ZoinkModdingLibrary.Attributes
             {
                 if (targetType == null)
                 {
-                    targetType = AssemblyOption.FindTypeInAssemblies(targetAssemblyName, targetTypeName);
+                    targetType = AssemblyOperations.FindTypeInAssemblies(targetAssemblyName, targetTypeName);
                 }
                 return targetType;
             }

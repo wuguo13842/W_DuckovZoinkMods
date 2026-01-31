@@ -1,6 +1,6 @@
-﻿using MiniMap.Managers;
-using Unity.VisualScripting;
+﻿using Unity.VisualScripting;
 using UnityEngine;
+using ZoinkModdingLibrary.ModSettings;
 
 namespace MiniMap.MonoBehaviours
 {
@@ -70,7 +70,7 @@ namespace MiniMap.MonoBehaviours
             {
                 return;
             }
-            float alpha = ModSettingManager.GetValue("alphaOnMouseEnter", 1f);
+            float alpha = ModSettingManager.GetValue(ModBehaviour.ModInfo, "alphaOnMouseEnter", 1f);
             canvasGroup.alpha = alpha;
         }
 

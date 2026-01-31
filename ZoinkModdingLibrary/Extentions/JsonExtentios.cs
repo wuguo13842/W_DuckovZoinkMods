@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace MiniMap.Extentions
+namespace ZoinkModdingLibrary.Extentions
 {
     public static class JsonExtentios
     {

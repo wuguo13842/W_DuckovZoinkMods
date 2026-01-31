@@ -13,7 +13,6 @@ namespace MiniMap.Compatibility
         public static MonoBehaviour? Instance { get; private set; }
 
         public static Harmony Harmony { get; } = new Harmony($"{ModBehaviour.MOD_ID}.compatibility");
-        public static ModLogger Logger { get; } = new ModLogger($"{ModBehaviour.MOD_NAME}.Compatibility");
 
         private List<CompatibilityPatcherBase> patchers = new List<CompatibilityPatcherBase>()
         {
@@ -36,7 +35,7 @@ namespace MiniMap.Compatibility
             Initialize();
             foreach (CompatibilityPatcherBase patcher in patchers)
             {
-                patcher.Setup(Harmony, Logger).Patch();
+                patcher.Setup(Harmony).Patch();
             }
         }
 

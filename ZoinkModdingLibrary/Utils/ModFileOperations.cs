@@ -1,12 +1,16 @@
 ﻿using Duckov.Modding;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Sirenix.Serialization;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
+using ZoinkModdingLibrary.Extentions;
+using ZoinkModdingLibrary.Logging;
+using ZoinkModdingLibrary.ModSettings;
 
 namespace ZoinkModdingLibrary.Utils
 {
@@ -14,59 +18,23 @@ namespace ZoinkModdingLibrary.Utils
     {
         private static Dictionary<string, Sprite> LoadedSprites = new Dictionary<string, Sprite>();
 
-
-        private static string? GetCallerAssemblyDirectory()
+        public static Sprite? LoadSprite(ModInfo modInfo, string? texturePath)
         {
-            var stackTrace = new System.Diagnostics.StackTrace();
-            var frames = stackTrace.GetFrames();
-
-            // 跳过当前方法（0）和调用此方法的方法（1）
-            for (int i = 2; i < frames.Length; i++)
+            if (string.IsNullOrEmpty(texturePath))
             {
-                var method = frames[i].GetMethod();
-                var assembly = method.Module.Assembly;
-
-                // 排除系统程序集和当前库
-                if (!IsSystemOrCurrentLibrary(assembly))
-                {
-                    var location = assembly.Location;
-                    return Path.GetDirectoryName(location);
-                }
+                return null;
             }
-
-            return null;
-        }
-
-        private static bool IsSystemOrCurrentLibrary(Assembly assembly)
-        {
-            var name = assembly.FullName;
-            return name.StartsWith("System.") ||
-                   name.StartsWith("Microsoft.") ||
-                   name.StartsWith("mscorlib") ||
-                   name.StartsWith("ZoinkModdingLibrary");
-        }
-        public static string? GetDirectory()
-        {
-            return GetCallerAssemblyDirectory();
-        }
-
-        public static Sprite? LoadSprite(string? texturePath, ModLogger? logger = null)
-        {
-            logger ??= ModLogger.DefultLogger;
+            var key = $"{modInfo.GetModId()}-{texturePath}";
             lock (LoadedSprites)
             {
-                if (string.IsNullOrEmpty(texturePath))
+                if (LoadedSprites.ContainsKey(key))
                 {
-                    return null;
+                    return LoadedSprites[key];
                 }
-                if (LoadedSprites.ContainsKey(texturePath))
-                {
-                    return LoadedSprites[texturePath];
-                }
-                string? directoryName = GetDirectory();
+                string? directoryName = modInfo.path;
                 if (string.IsNullOrEmpty(directoryName))
                 {
-                    logger.LogError("Failed to get directory for loading sprite.");
+                    Log.Error("Failed to get directory for loading sprite.");
                     return null;
                 }
                 string path = Path.Combine(directoryName, "textures");
@@ -78,9 +46,9 @@ namespace ZoinkModdingLibrary.Utils
                     if (texture2D.LoadImage(data))
                     {
                         Sprite sprite = Sprite.Create(texture2D, new Rect(0f, 0f, (float)texture2D.width, (float)texture2D.height), new Vector2(0.5f, 0.5f));
-                        if (!LoadedSprites.ContainsKey(texturePath))
+                        if (!LoadedSprites.ContainsKey(key))
                         {
-                            LoadedSprites[texturePath] = sprite;
+                            LoadedSprites[key] = sprite;
                         }
                         return sprite;
                     }
@@ -89,13 +57,12 @@ namespace ZoinkModdingLibrary.Utils
             }
         }
 
-        public static JObject? LoadJson(string filePath, ModLogger? logger = null)
+        public static JObject? LoadConfig(ModInfo modInfo, string filePath)
         {
-            logger ??= ModLogger.DefultLogger;
-            string? directoryName = GetDirectory();
+            string? directoryName = modInfo.path;
             if (string.IsNullOrEmpty(directoryName))
             {
-                logger.LogError("Failed to get directory for loading json.");
+                Log.Error("Failed to get directory for loading json.");
                 return null;
             }
             string path = Path.Combine(directoryName, "config");
@@ -111,18 +78,17 @@ namespace ZoinkModdingLibrary.Utils
             }
             catch (Exception e)
             {
-                logger.LogError($"Failed to Load Json({text}):\n{e.Message}");
+                Log.Error($"Failed to Load Json({text}):\n{e.Message}");
                 return null;
             }
         }
 
-        public static void SaveJson(string modConfigFileName, JObject modConfig, ModLogger? logger = null)
+        public static void SaveConfig(ModInfo modInfo, string modConfigFileName, JObject modConfig)
         {
-            logger ??= ModLogger.DefultLogger;
-            string? directoryName = GetDirectory();
+            string? directoryName = modInfo.path;
             if (directoryName == null)
             {
-                logger.LogError("Failed to get directory for saving json.");
+                Log.Error("Failed to get directory for saving json.");
                 return;
             }
             string path = Path.Combine(directoryName, "config");
@@ -137,7 +103,7 @@ namespace ZoinkModdingLibrary.Utils
             }
             catch (Exception e)
             {
-                logger.LogError($"Failed to Save Json: {e.Message}");
+                Log.Error($"Failed to Save Json: {e.Message}");
                 throw;
             }
         }

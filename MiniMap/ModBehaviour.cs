@@ -1,30 +1,34 @@
-﻿using HarmonyLib;
-using System.Reflection;
-using UnityEngine;
-using Duckov.Modding;
-using MiniMap.Patchers;
-using MiniMap.Managers;
-using MiniMap.Utils;
-using ZoinkModdingLibrary.Patcher;
-using ZoinkModdingLibrary;
-using MiniMap.Compatibility.BetterMapMarker.Patchers;
-using Unity.VisualScripting;
+﻿using Duckov.Modding;
+using HarmonyLib;
 using MiniMap.Compatibility;
-using System.Collections.Generic;
+using MiniMap.Compatibility.BetterMapMarker.Patchers;
+using MiniMap.Managers;
+using MiniMap.Patchers;
+using MiniMap.Utils;
+using Sirenix.Serialization;
 using System;
+using System.Collections.Generic;
+using System.Reflection;
+using Unity.VisualScripting;
+using UnityEngine;
+using ZoinkModdingLibrary;
+using ZoinkModdingLibrary.Logging;
+using ZoinkModdingLibrary.ModSettings;
+using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap
 {
-
     public class ModBehaviour : Duckov.Modding.ModBehaviour
     {
         public static readonly string MOD_ID = "com.zoink.minimap";
 
         public static readonly string MOD_NAME = "MiniMap";
-        public static ModLogger Logger { get; } = new ModLogger(MOD_NAME);
         public static Harmony Harmony { get; } = new Harmony(MOD_ID);
 
         public static ModBehaviour? Instance { get; private set; }
+
+        public static ModInfo ModInfo => Instance?.info ?? default;
 
         private List<PatcherBase> patchers = new List<PatcherBase>() {
             CharacterSpawnerRootPatcher.Instance,
@@ -68,7 +72,7 @@ namespace MiniMap
 
         public bool UnpatchSingleExtender(string assembliyName, string targetTypeName, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
         {
-            Type? targetType = AssemblyOption.FindTypeInAssemblies(assembliyName, targetTypeName);
+            Type? targetType = AssemblyOperations.FindTypeInAssemblies(assembliyName, targetTypeName);
             if (targetType == null)
             {
                 Debug.LogWarning($"[{MOD_NAME}] Target Type \"{targetTypeName}\" Not Found!");
@@ -83,15 +87,15 @@ namespace MiniMap
         {
             try
             {
-                Logger.Log($"Patching Patchers");
+                Log.Info($"Patching Patchers");
                 foreach (var patcher in patchers)
                 {
-                    patcher.Setup(Harmony, Logger).Patch();
+                    patcher.Setup(Harmony).Patch();
                 }
             }
             catch (Exception e)
             {
-                Logger.LogError($"应用扩展器失败: {e}");
+                Log.Error($"应用扩展器失败: {e}");
             }
         }
         void CancelHarmonyPatchers()
@@ -105,14 +109,14 @@ namespace MiniMap
             }
             catch (Exception e)
             {
-                Logger.LogError($"取消扩展器失败: {e}");
+                Log.Error($"取消扩展器失败: {e}");
             }
         }
         void Awake()
         {
             if (Instance != null)
             {
-                Logger.LogError($"ModBehaviour 已实例化");
+                Log.Error($"ModBehaviour 已实例化");
                 return;
             }
             Instance = this;
@@ -125,12 +129,9 @@ namespace MiniMap
             {
                 MinimapManager.Initialize();
                 ApplyHarmonyPatchers();
-                
-                // 初始化死亡事件处理器
-                DeathEventHandler.Initialize();
-                
-                ModManager.OnModActivated += ModManager_OnModActivated;
+				DeathEventHandler.Initialize(); // 初始化死亡事件处理器
                 LevelManager.OnEvacuated += OnEvacuated;
+                
                 //SceneLoader.onFinishedLoadingScene += PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized += PoiManager.OnLenvelIntialized;
 				//SceneLoader.onStartedLoadingScene += onStartedLoadingScene;  // 场景加载流程开始时，在显示加载界面之前
@@ -141,7 +142,7 @@ namespace MiniMap
             }
             catch (Exception e)
             {
-                Logger.LogError($"启用mod失败: {e}");
+                Log.Error($"启用mod失败: {e}");
             }
         }
 
@@ -155,39 +156,31 @@ namespace MiniMap
             try
             {
                 CancelHarmonyPatchers();
-                
-                // 清理死亡事件处理器
-                DeathEventHandler.Cleanup();
-                
-                ModManager.OnModActivated -= ModManager_OnModActivated;
+                DeathEventHandler.Cleanup(); // 清理死亡事件处理器
                 LevelManager.OnEvacuated -= OnEvacuated;
+				
                 //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
 				SceneLoader.onStartedLoadingScene -= onFinishedLoadingScene;
                 MinimapManager.Destroy();
-                Logger.Log($"disable mod {MOD_NAME}");
+                Log.Info($"disable mod {MOD_NAME}");
             }
             catch (Exception e)
             {
-                Logger.LogError($"禁用mod失败: {e}");
+                Log.Error($"禁用mod失败: {e}");
             }
-        }
-
-        //下面两个函数需要实现，实现后的效果是：ModSetting和mod之间不需要启动顺序，两者无论谁先启动都能正常添加设置
-        private void ModManager_OnModActivated(ModInfo arg1, Duckov.Modding.ModBehaviour arg2)
-        {
-            //(触发时机:此mod在ModSetting之前启用)检查启用的mod是否是ModSetting,是进行初始化
-            if (arg1.name != Api.ModSettingAPI.MOD_NAME || !Api.ModSettingAPI.Init(info)) return;
-            ModSettingManager.needUpdate = true;
         }
 
         protected override void OnAfterSetup()
         {
-            //(触发时机:此mod在ModSetting之后启用)此mod，Setup后,尝试进行初始化
-            if (Api.ModSettingAPI.Init(info))
-            {
-                ModSettingManager.needUpdate = true;
-            }
+            Log.Info("Mod已设定");
+            ModSettingManager.Initialize(OnInitialized);
+        }
+
+        private void OnInitialized()
+        {
+            Log.Info("$SettingManager初始化成功，开始创建UI");
+            ModSettingManager.CreateUI(ModInfo);
         }
 
         void Update()
@@ -201,14 +194,12 @@ namespace MiniMap
             }
             catch (Exception e)
             {
-                Logger.LogError($"更新失败: {e}");
+                Log.Error($"更新失败: {e}");
             }
         }
 		
 		private static void onFinishedLoadingScene(SceneLoadingContext context)
 		{
-			ModSettingManager.OnLoadingCreateUI();
-			
             if (string.IsNullOrEmpty(context.sceneName)) return;
                 
 			// 预加载场景中心点（触发缓存填充）

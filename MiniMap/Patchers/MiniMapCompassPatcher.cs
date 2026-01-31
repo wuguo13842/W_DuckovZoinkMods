@@ -1,10 +1,11 @@
 ﻿using Duckov.MiniMaps;
-using MiniMap.Managers;
 using MiniMap.Utils;
 using System;
 using System.Reflection;
 using UnityEngine;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.Logging;
+using ZoinkModdingLibrary.ModSettings;
 using ZoinkModdingLibrary.Patcher;
 
 namespace MiniMap.Patchers
@@ -27,7 +28,7 @@ namespace MiniMap.Patchers
                     arrowField = typeof(MiniMapCompass).GetField("arrow", BindingFlags.NonPublic | BindingFlags.Instance);
                     if (arrowField == null)
                     {
-                        ModBehaviour.Logger.Log($"无法获取指南针对象");
+                        Log.Info($"无法获取指南针对象");
                     }
                 }
 
@@ -36,13 +37,13 @@ namespace MiniMap.Patchers
                 {
                     return false;
                 }
-                float rotationAngle = ModSettingManager.GetValue<bool>("mapRotation") ? MiniMapCommon.GetMinimapRotation() : MiniMapCommon.originMapZRotation;
+                float rotationAngle = ModSettingManager.GetValue<bool>(ModBehaviour.ModInfo, "mapRotation") ? MiniMapCommon.GetMinimapRotation() : MiniMapCommon.originMapZRotation;
                 trans.localRotation = Quaternion.Euler(0f, 0f, rotationAngle);
                 return false;
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"设置指南针旋转时出错：" + e.ToString());
+                Log.Error($"设置指南针旋转时出错：" + e.ToString());
                 return true;
             }
         }

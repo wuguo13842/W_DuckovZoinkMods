@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using Unity.VisualScripting;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.Logging;
 using ZoinkModdingLibrary.Patcher;
 using ZoinkModdingLibrary.Utils;
 
@@ -38,12 +39,12 @@ namespace BetterModUpload.Pathcers
                 string ignoreFilePath = Path.Combine(___info.path, ".steamignore");
                 if (!File.Exists(ignoreFilePath) || string.IsNullOrWhiteSpace(File.ReadAllText(ignoreFilePath)))
                 {
-                    ModBehaviour.Logger.LogWarning("未找到 .steamignore 文件或该文件为空！Mod将正常上传！");
+                    Log.Warning("未找到 .steamignore 文件或该文件为空！Mod将正常上传！");
                     ModBehaviour.Instance?.uploadFilesInfo?.SetText(string.Join("\n", files));
                     ModBehaviour.Instance?.ignoreDetected?.gameObject.SetActive(false);
                     return true;
                 }
-                ModBehaviour.Logger.LogWarning("已找到 .steamignore 文件，上传时将按其规则忽略文件。");
+                Log.Warning("已找到 .steamignore 文件，上传时将按其规则忽略文件。");
                 ModBehaviour.Instance?.ignoreDetected?.gameObject.SetActive(true);
                 SteamIgnoreParser parser = new SteamIgnoreParser(ignoreFilePath);
                 var filesToCopy = parser.FilterNonIgnoredFiles(files);
@@ -77,7 +78,7 @@ namespace BetterModUpload.Pathcers
                         string newInfoFile = Path.Combine(newInfo.path, "info.ini");
                         string originInfoFile = Path.Combine(___info.path, "info.ini");
                         File.Copy(newInfoFile, originInfoFile, true);
-                        SystemFileOperations.ClearFolder(newInfo.path, false, ModBehaviour.Logger);
+                        SystemFileOperations.ClearFolder(newInfo.path, false);
                     });
                 }
             }

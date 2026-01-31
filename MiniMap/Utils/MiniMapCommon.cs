@@ -1,11 +1,5 @@
-﻿using Duckov.MiniMaps;
-using Duckov.MiniMaps.UI;
-using HarmonyLib;
-using MiniMap.Managers;
-using System;
-using System.Reflection;
-using UnityEngine;
-using UnityEngine.SceneManagement;
+﻿using UnityEngine;
+using ZoinkModdingLibrary.ModSettings;
 
 namespace MiniMap.Utils
 {
@@ -25,7 +19,7 @@ namespace MiniMap.Utils
             {
                 return 0;
             }
-            string facingBase = ModSettingManager.GetActualDropdownValue("facingBase", false);
+            string facingBase = ModSettingManager.GetActualDropdownValue(ModBehaviour.ModInfo, "facingBase", false);
             if (character.IsMainCharacter && facingBase == "Mouse")
             {
                 return -GetAngle();

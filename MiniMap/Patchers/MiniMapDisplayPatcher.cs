@@ -10,6 +10,8 @@ using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.UI;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.Logging;
+using ZoinkModdingLibrary.ModSettings;
 using ZoinkModdingLibrary.Patcher;
 
 namespace MiniMap.Patchers
@@ -37,13 +39,13 @@ namespace MiniMap.Patchers
         {
             try
             {
-                float rotationAngle = ModSettingManager.GetValue<bool>("mapRotation") ? MiniMapCommon.GetMinimapRotation() : MiniMapCommon.originMapZRotation;
+                float rotationAngle = ModSettingManager.GetValue<bool>(ModBehaviour.ModInfo, "mapRotation") ? MiniMapCommon.GetMinimapRotation() : MiniMapCommon.originMapZRotation;
                 __instance.transform.rotation = Quaternion.Euler(0f, 0f, rotationAngle);
                 return false;
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"设置小地图旋转时出错：" + e.ToString());
+                Log.Error($"设置小地图旋转时出错：" + e.ToString());
                 return true;
             }
         }

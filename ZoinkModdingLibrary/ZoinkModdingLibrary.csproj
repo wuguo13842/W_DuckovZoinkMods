@@ -9,6 +9,10 @@
     <ManagedPath>$(DuckovPath)\Managed</ManagedPath>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>$(DefineConstants);LOG_ENABLED</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <!-- Harmony DLL -->
     <Reference Include="0Harmony">

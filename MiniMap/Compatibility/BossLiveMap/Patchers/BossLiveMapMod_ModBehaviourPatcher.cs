@@ -7,6 +7,7 @@ using System.Reflection;
 using UnityEngine;
 using ZoinkModdingLibrary.Attributes;
 using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Compatibility.BetterMapMarker.Patchers
 {
@@ -47,8 +48,8 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
             {
                 name = "<s>" + name + "</s>";
             }
-            Type? modType = AssemblyOption.FindTypeInAssemblies("BossLiveMapMod", "BossLiveMapMod.ModBehaviour", ModBehaviour.Logger);
-            Color color = modType?.InvokeStaticMethod<Color>("GetBossListTextColor", new object[] { entry }) ?? Color.white;
+            Type? modType = AssemblyOperations.FindTypeInAssemblies("BossLiveMapMod", "BossLiveMapMod.ModBehaviour");
+            Color color = modType?.InvokeMethod<Color>("GetBossListTextColor", parameters: new object[] { entry }) ?? Color.white;
 
             string colorHex = ColorUtility.ToHtmlStringRGBA(color);
             __result = $"<color=#{colorHex}>{name}</color>";

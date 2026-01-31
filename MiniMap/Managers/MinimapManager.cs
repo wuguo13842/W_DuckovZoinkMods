@@ -1,6 +1,7 @@
 using Cysharp.Threading.Tasks;
 using Duckov.MiniMaps;
 using Duckov.MiniMaps.UI;
+using Duckov.Modding;
 using LeTai.TrueShadow;
 using MiniMap.MonoBehaviours;
 using MiniMap.Poi;
@@ -15,15 +16,18 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UI.ProceduralImage;
+using ZoinkModdingLibrary.Extentions;
 using ZoinkModdingLibrary.GameUI;
-using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.ModSettings;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Managers
 {
+    [Log(LogOutput.Output, LogOutput.Output, LogLevel.Debug, LogLevel.Debug)]
     public static class MinimapManager
     {
         public static event Action? MiniMapApplied;
-        public static bool isEnabled = true;
+        public static bool isEnabled = false;
         public static bool isToggled = false;
         public static bool IsInitialized { get; private set; } = false;
 
@@ -32,12 +36,11 @@ namespace MiniMap.Managers
 
         public static float MapBorderEulerZRotation = 0f;
         public static Vector2 displayZoomRange = new Vector2(0.25f, 4f);
-
         public static Color backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
+        public static GameObject? miniMapScaleContainer;
 
         private static GameObject? customCanvas;
         private static GameObject? miniMapContainer;
-        public static GameObject? miniMapScaleContainer;
         private static GameObject? minimapObject;
 
         private static MiniMapDisplay? minimapDisplay;
@@ -70,34 +73,42 @@ namespace MiniMap.Managers
         {
             if (IsInitialized)
             {
-                ModBehaviour.Logger.LogError($"MinimapManager 已初始化");
+                Log.Error($"MinimapManager 已初始化");
                 return;
             }
             CreateMiniMapContainer();
             InitializeInputSystem();
-            ModSettingManager.ConfigLoaded += OnConfigLoaded;
+            //ModSettingManager.ConfigLoaded += OnConfigLoaded;
             ModSettingManager.ConfigChanged += OnConfigChanged;
             ModSettingManager.ButtonClicked += OnButtonClicked;
             SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneLoader.onStartedLoadingScene += OnStartedLoadingScene;
 
             IsInitialized = true;
         }
 
         public static void Destroy()
         {
-            ModBehaviour.Logger.Log($"正在销毁小地图容器");
+            Log.Info($"正在销毁小地图容器");
             GameObject.Destroy(miniMapContainer);
             CleanupInputSystem();
-            ModSettingManager.ConfigLoaded -= OnConfigLoaded;
+            //ModSettingManager.ConfigLoaded -= OnConfigLoaded;
             ModSettingManager.ConfigChanged -= OnConfigChanged;
             ModSettingManager.ButtonClicked -= OnButtonClicked;
             SceneManager.sceneLoaded -= OnSceneLoaded;
+            SceneLoader.onStartedLoadingScene -= OnStartedLoadingScene;
 
             IsInitialized = false;
         }
 
-        private static void OnConfigChanged(string key, object value)
+        private static void OnStartedLoadingScene(SceneLoadingContext obj)
         {
+            ApplyConfigs();
+        }
+
+        private static void OnConfigChanged(ModInfo modInfo, string key, object? value)
+        {
+            if (!modInfo.ModIdEquals(ModBehaviour.Instance!.info)) return;
             switch (key)
             {
                 case "enableMiniMap":
@@ -120,7 +131,7 @@ namespace MiniMap.Managers
             }
         }
 
-        private static void OnConfigLoaded()
+        private static void ApplyConfigs()
         {
             OnEnabledChanged();
             OnMinimapPositionChanged();
@@ -128,12 +139,13 @@ namespace MiniMap.Managers
             UpdateInputBindings();
         }
 
-        private static void OnButtonClicked(string key)
+        private static void OnButtonClicked(ModInfo modInfo, string key)
         {
+            if (!modInfo.ModIdEquals(ModBehaviour.Instance!.info)) return;
             switch (key)
             {
                 case "resetAllButton":
-                    ModSettingManager.ResetAllConfigs();
+                    ModSettingManager.CreateUI(ModBehaviour.ModInfo, true);
                     break;
             }
         }
@@ -142,14 +154,14 @@ namespace MiniMap.Managers
         {
             try
             {
-                bool enabled = ModSettingManager.GetValue<bool>("enableMiniMap");
+                bool enabled = ModSettingManager.GetValue<bool>(ModBehaviour.ModInfo, "enableMiniMap");
                 isEnabled = enabled;
                 isToggled = enabled;
                 customCanvas?.SetActive(isEnabled);
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"设置小地图开关时发生错误: {e.Message}");
+                Log.Error($"设置小地图开关时发生错误: {e.Message}");
             }
         }
 
@@ -166,7 +178,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"尝试显示小地图时发生错误: {e.Message}");
+                Log.Error($"尝试显示小地图时发生错误: {e.Message}");
             }
         }
 
@@ -183,7 +195,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"隐藏小地图时发生错误: {e.Message}");
+                Log.Error($"隐藏小地图时发生错误: {e.Message}");
             }
         }
 
@@ -201,7 +213,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"调整设置时发生错误: {e.Message}");
+                Log.Error($"调整设置时发生错误: {e.Message}");
             }
         }
 
@@ -220,11 +232,11 @@ namespace MiniMap.Managers
         {
             if (!HasMap())
                 return;
-
-            float displayZoomScale = ModSettingManager.GetValue<float>("displayZoomScale");
-            displayZoomScale += symbol * 0.1f;
+            float displayZoomScale = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
+            float miniMapZoomStep = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "miniMapZoomStep");
+            displayZoomScale += symbol * miniMapZoomStep;
             displayZoomScale = Mathf.Clamp(displayZoomScale, displayZoomRange.x, displayZoomRange.y);
-            ModSettingManager.SaveValue("displayZoomScale", displayZoomScale, true);
+            ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", displayZoomScale);
             UpdateDisplayZoom();
         }
 
@@ -232,7 +244,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                float displayZoomScale = ModSettingManager.GetValue<float>("displayZoomScale");
+                float displayZoomScale = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
                 if (minimapDisplay != null)
                 {
                     minimapDisplay.transform.localScale = Vector3.one * displayZoomScale;
@@ -240,7 +252,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"更新小地图缩放时发生错误: {e.Message}");
+                Log.Error($"更新小地图缩放时发生错误: {e.Message}");
             }
         }
 
@@ -259,7 +271,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"设置小地图大小时发生错误: {e.Message}");
+                Log.Error($"设置小地图大小时发生错误: {e.Message}");
             }
         }
 
@@ -269,10 +281,7 @@ namespace MiniMap.Managers
             {
                 return;
             }
-            float miniMapWindowScale = ModSettingManager.GetValue<float>("miniMapWindowScale");
-            //Vector3 scaleVector = Vector3.one * miniMapWindowScale;
-            //if (miniMapContainer.transform.localScale != scaleVector)
-            //    miniMapContainer.transform.localScale = scaleVector;
+            float miniMapWindowScale = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "miniMapWindowScale");
             if (miniMapContainer.transform is RectTransform rect)
             {
                 Vector2 targetSize = miniMapSize * miniMapWindowScale;
@@ -312,11 +321,11 @@ namespace MiniMap.Managers
                 float parentHeight = parentRect.rect.height;
                 if (parentRect.rect.width <= 0 || parentRect.rect.height <= 0)
                 {
-                    ModBehaviour.Logger.LogWarning($"父Canvas尺寸异常: {parentRect.rect.width} x {parentRect.rect.height}");
+                    Log.Warning($"父Canvas尺寸异常: {parentRect.rect.width} x {parentRect.rect.height}");
                     return;
                 }
-                float miniMapPositionX = ModSettingManager.GetValue<float>("miniMapPositionX");
-                float miniMapPositionY = ModSettingManager.GetValue<float>("miniMapPositionY");
+                float miniMapPositionX = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "miniMapPositionX");
+                float miniMapPositionY = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "miniMapPositionY");
                 float offsetX = (miniMapPositionX - 0.5f) * parentWidth;
                 float offsetY = (miniMapPositionY - 0.5f) * parentHeight;
                 if (miniMapRect != null)
@@ -324,7 +333,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"更新小地图UI位置时发生错误: {e.Message}");
+                Log.Error($"更新小地图UI位置时发生错误: {e.Message}");
             }
         }
 
@@ -332,7 +341,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                ModBehaviour.Logger.Log($"正在加载场景 {scene.name}, 模式: {mode}");
+                Log.Info($"正在加载场景 {scene.name}, 模式: {mode}");
                 if (LevelManager.Instance == null || !isEnabled)
                 {
                     customCanvas?.SetActive(false);
@@ -355,7 +364,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"加载场景时发生错误: {e.Message}");
+                Log.Error($"加载场景时发生错误: {e.Message}");
             }
         }
 
@@ -367,13 +376,13 @@ namespace MiniMap.Managers
                 {
                     return;
                 }
-                ModBehaviour.Logger.Log($"等待角色初始化...");
+                Log.Info($"等待角色初始化...");
                 while (LevelManager.Instance.MainCharacter == null || LevelManager.Instance.PetCharacter == null)
                 {
                     await UniTask.Delay(200);
                 }
-                ModBehaviour.Logger.Log($"角色已完成初始化");
-                ModBehaviour.Logger.Log($"已生成小地图");
+                Log.Info($"角色已完成初始化");
+                Log.Info($"已生成小地图");
                 PoiCommon.CreatePoiIfNeeded(LevelManager.Instance.MainCharacter, out _, out DirectionPointOfInterest? mainDirectionPoi);
                 PoiCommon.CreatePoiIfNeeded(LevelManager.Instance.PetCharacter, out CharacterPointOfInterest? petPoi, out DirectionPointOfInterest? petDirectionPoi);
                 MapMarkerManager.Instance.InvokeMethod("Load");
@@ -383,7 +392,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"生成小地图时发生错误: {e.Message}");
+                Log.Error($"生成小地图时发生错误: {e.Message}");
             }
         }
 
@@ -413,7 +422,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"处理UI遮挡时发生错误: {e.Message}");
+                Log.Error($"处理UI遮挡时发生错误: {e.Message}");
             }
         }
 
@@ -453,7 +462,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"更新小地图时发生错误: {e.Message}");
+                Log.Error($"更新小地图时发生错误: {e.Message}");
             }
         }
 
@@ -461,7 +470,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                ModBehaviour.Logger.Log($"创建小地图容器");
+                Log.Info($"创建小地图容器");
                 // 创建 Canvas
                 customCanvas = new GameObject("Zoink_MinimapCanvas");
                 customCanvas.SetActive(false);
@@ -565,11 +574,11 @@ namespace MiniMap.Managers
                 miniMapViewportRect.offsetMax = Vector2.zero;
 
                 GameObject.DontDestroyOnLoad(customCanvas);
-                ModBehaviour.Logger.Log($"已创建小地图容器");
+                Log.Info($"已创建小地图容器");
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"创建小地图容器时发生错误: {e.Message}");
+                Log.Error($"创建小地图容器时发生错误: {e.Message}");
             }
         }
 
@@ -582,7 +591,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"获取原始地图时发生错误:{e.Message}");
+                Log.Error($"获取原始地图时发生错误:{e.Message}");
                 return null;
             }
         }
@@ -594,12 +603,12 @@ namespace MiniMap.Managers
                 MiniMapDisplay? originalDisplay = GetOriginalDisplay();
                 if (originalDisplay == null)
                 {
-                    ModBehaviour.Logger.LogError($"原始地图为空！");
+                    Log.Error($"原始地图为空！");
                     return false;
                 }
                 if (minimapObject != null)
                 {
-                    ModBehaviour.Logger.LogError($"原始地图已复制，请勿重复复制！");
+                    Log.Error($"原始地图已复制，请勿重复复制！");
                     return false;
                 }
 
@@ -611,7 +620,7 @@ namespace MiniMap.Managers
                 minimapDisplay.InvokeMethod("RegisterEvents");
                 if (minimapDisplay == null || minimapObject == null)
                 {
-                    ModBehaviour.Logger.LogError($"获取 MinimapDisplay 复制体失败！");
+                    Log.Error($"获取 MinimapDisplay 复制体失败！");
                     GameObject.Destroy(minimapObject);
                     GameObject.Destroy(minimapDisplay);
                     return false;
@@ -638,7 +647,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"复制地图时发生错误: {e.Message}");
+                Log.Error($"复制地图时发生错误: {e.Message}");
                 return false;
             }
         }
@@ -651,14 +660,14 @@ namespace MiniMap.Managers
                 {
                     return;
                 }
-                float rotationAngle = ModSettingManager.GetValue<bool>("miniMapRotation") ? MiniMapCommon.GetMinimapRotation() : MiniMapCommon.originMapZRotation;
+                float rotationAngle = ModSettingManager.GetValue<bool>(ModBehaviour.ModInfo, "miniMapRotation") ? MiniMapCommon.GetMinimapRotation() : MiniMapCommon.originMapZRotation;
                 var rotation = Quaternion.Euler(0, 0, rotationAngle);
                 minimapDisplay.transform.rotation = rotation;
                 miniMapNorthRect.localRotation = rotation;
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"更新小地图旋转时发生错误: {e.Message}");
+                Log.Error($"更新小地图旋转时发生错误: {e.Message}");
             }
         }
 
@@ -690,7 +699,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"更新小地图移动时发生错误: {e.Message}");
+                Log.Error($"更新小地图移动时发生错误: {e.Message}");
             }
         }
 
@@ -698,8 +707,8 @@ namespace MiniMap.Managers
 
 
         // 新增的 Input System 相关字段
-        private static Key _zoomInKey = ModSettingManager.GetValue<Key>("MiniMapZoomInKey");
-        private static Key _zoomOutKey = ModSettingManager.GetValue<Key>("MiniMapZoomOutKey");
+        private static Key _zoomInKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapZoomInKey");
+        private static Key _zoomOutKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapZoomOutKey");
         private static InputAction? _toggleAction;       // 切换小地图显示/隐藏的按键动作
         private static InputAction? _zoomInAction;       // 放大按键动作
         private static InputAction? _zoomOutAction;      // 缩小按键动作
@@ -718,7 +727,7 @@ namespace MiniMap.Managers
         {
             try
             {
-                Key _toggleKey = ModSettingManager.GetValue<Key>("MiniMapToggleKey");
+                Key _toggleKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapToggleKey");
                 // Key _toggleKey = Key.Digit9;
                 // Key _zoomInKey = Key.Equals;
                 // Key _zoomOutKey = Key.Minus;
@@ -745,7 +754,7 @@ namespace MiniMap.Managers
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"初始化 Input System 失败: {e.Message}");
+                Log.Error($"初始化 Input System 失败: {e.Message}");
             }
         }
 
@@ -852,7 +861,7 @@ namespace MiniMap.Managers
                     // 检查另一个缩放键是否也被按下，如果同时按下则停止，松开继续
                     if (Keyboard.current[otherKey].isPressed)
                     {
-                        ModBehaviour.Logger.Log($"另一个缩放键被按下，停止当前缩放");
+                        Log.Info($"另一个缩放键被按下，停止当前缩放");
                         await UniTask.Delay(100, DelayType.Realtime, PlayerLoopTiming.Update, token);
                         continue;
                     }
@@ -900,9 +909,9 @@ namespace MiniMap.Managers
         private static void UpdateInputBindings()
         {
             // 从配置获取最新的按键绑定
-            Key _toggleKey = ModSettingManager.GetValue<Key>("MiniMapToggleKey");
-            _zoomInKey = ModSettingManager.GetValue<Key>("MiniMapZoomInKey");
-            _zoomOutKey = ModSettingManager.GetValue<Key>("MiniMapZoomOutKey");
+            Key _toggleKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapToggleKey");
+            _zoomInKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapZoomInKey");
+            _zoomOutKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapZoomOutKey");
             // Key _toggleKey = Key.Digit9;
             // Key _zoomInKey = Key.Equals;
             // Key _zoomOutKey = Key.Minus;

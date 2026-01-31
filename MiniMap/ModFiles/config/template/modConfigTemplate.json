@@ -1,217 +1,217 @@
 {
-    "groups": {
-        "MiniMap": {
-            "descCN": "小地图",
-            "descEN": "Mini Map",
-            "configs": {
-                "enableMiniMap": {
-                    "type": "toggle",
-                    "descCN": "启用小地图",
-                    "descEN": "Enable Mini Map",
-                    "default": true
-                },
-                "alphaOnMouseEnter": {
-                    "type": "slider",
-                    "descCN": "鼠标进入时不透明度",
-                    "descEN": "Alpha When Mouse Enter",
-                    "default": 0.1,
-                    "min": 0,
-                    "max": 1.0,
-                    "decimalPlaces": 2
-                },
-                "miniMapWindowScale": {
-                    "type": "slider",
-                    "descCN": "小地图窗口缩放",
-                    "descEN": "Mini Map Window Scale",
-                    "default": 1.6,
-                    "min": 0.1,
-                    "max": 3.0,
-                    "decimalPlaces": 2
-                },
-                "miniMapPositionX": {
-                    "type": "slider",
-                    "descCN": "小地图位置X",
-                    "descEN": "Mini Map Position X",
-                    "default": 0.1,
-                    "min": 0,
-                    "max": 1.0,
-                    "decimalPlaces": 3
-                },
-                "miniMapPositionY": {
-                    "type": "slider",
-                    "descCN": "小地图位置Y",
-                    "descEN": "Mini Map Position Y",
-                    "default": 0.72,
-                    "min": 0,
-                    "max": 1.0,
-                    "decimalPlaces": 3
-                },
-                "hideDisplayName": {
-                    "type": "toggle",
-                    "descCN": "隐藏图标名称",
-                    "descEN": "Hide Name of Icons",
-                    "default": false
-                },
-                "miniMapRotation": {
-                    "type": "toggle",
-                    "descCN": "小地图旋转",
-                    "descEN": "Mini Map Rotation",
-                    "default": false
-                },
-                "mapRotation": {
-                    "type": "toggle",
-                    "descCN": "大地图旋转",
-                    "descEN": "Map Rotation",
-                    "default": false
-                },
-                "facingBase": {
-                    "type": "dropdownList",
-                    "descCN": "面向指示基准",
-                    "descEN": "Facing Direction Base On",
-                    "optionsCN": [ "指针方向", "面朝方向" ],
-                    "optionsEN": [ "Mouse", "Face" ],
-                    "default": 0
-                }
-            }
-        },
-        "POI": {
-            "descCN": "单位显示",
-            "descEN": "Position Display",
-            "configs": {
-                "showOnlyActivated": {
-                    "type": "toggle",
-                    "descCN": "仅显示附近敌人（建议打开）",
-                    "descEN": "Show Nearby Only",
-                    "default": true
-                },
-                "showPoiInMap": {
-                    "type": "toggle",
-                    "descCN": "大地图显示敌人位置",
-                    "descEN": "Show Enemy In Map",
-                    "default": true
-                },
-                "showPoiInMiniMap": {
-                    "type": "toggle",
-                    "descCN": "小地图显示敌人位置",
-                    "descEN": "Show Enemy In Mini Map",
-                    "default": true
-                },
-                "showPetPoi": {
-                    "type": "toggle",
-                    "descCN": "显示宠物图标",
-                    "descEN": "Show Your Pet",
-                    "default": true
-                },
-                "showBossPoi": {
-                    "type": "toggle",
-                    "descCN": "显示Boss图标",
-                    "descEN": "Show Boss",
-                    "default": true
-                },
-                "showEnemyPoi": {
-                    "type": "toggle",
-                    "descCN": "显示普通敌人图标",
-                    "descEN": "Show Enemy",
-                    "default": true
-                },
-                "showNeutralPoi": {
-                    "type": "toggle",
-                    "descCN": "显示中立单位图标",
-                    "descEN": "Show Neutral",
-                    "default": true
-                },
-            }
-        },
-        "HotKeys": {
-            "descCN": "快捷键",
-            "descEN": "Hot Keys",
-            "configs": {
-                "MiniMapToggleKey": {
-                    "type": "keyBinding",
-                    "descCN": "小地图开关快捷键",
-                    "descEN": "Toggle Mini Map Hot Key",
-                    "default": "Digit9"
-                },
-                "MiniMapZoomInKey": {
-                    "type": "keyBinding",
-                    "descCN": "小地图放大快捷键",
-                    "descEN": "Mini Map Zoom In Hot Key",
-                    "default": "Equals"
-                },
-                "MiniMapZoomOutKey": {
-                    "type": "keyBinding",
-                    "descCN": "小地图缩小快捷键",
-                    "descEN": "Mini Map Zoom Out Hot Key",
-                    "default": "Minus"
-                }
-            }
-        },
-        "Compatibility.BetterMapMarker": {
-            "descCN": "兼容性-标记所有箱子",
-            "descEN": "Compatibility-BetterMapMarker",
-            "configs": {
-                "betterMapMarker.showInMiniMap": {
-                    "type": "toggle",
-                    "descCN": "在小地图中显示（不建议开启）",
-                    "descEN": "Show In Mini Map",
-                    "default": false
-                },
-                "betterMapMarker.poiScaleFactor": {
-                    "type": "slider",
-                    "descCN": "图标缩放系数",
-                    "descEN": "Icon Scale Factor",
-                    "default": 1,
-                    "min": 0.1,
-                    "max": 2.0,
-                    "decimalPlaces": 2
-                }
-            }
-        },
-        "Compatibility.ShoulderSurfing": {
-            "descCN": "兼容性-第三人称越肩视角",
-            "descEN": "Compatibility-ShoulderSurfing",
-            "configs": {
-                "shoulderSurfing.showPlayerArrow": {
-                    "type": "toggle",
-                    "descCN": "显示玩家指示器",
-                    "descEN": "Show Player Arrow",
-                    "default": false
-                }
-            }
-        },
-        "Compatibility.BossLiveMap": {
-            "descCN": "兼容性-Boss实时地图标记",
-            "descEN": "Compatibility-BossLiveMap",
-            "configs": {
-                "bossLiveMap.poiScaleFactor": {
-                    "type": "slider",
-                    "descCN": "图标缩放系数",
-                    "descEN": "Icon Scale Factor",
-                    "default": 1,
-                    "min": 0.1,
-                    "max": 2.0,
-                    "decimalPlaces": 2
-                }
+    "MiniMap": {
+        "type": "group",
+        "descCN": "小地图",
+        "descEN": "Mini Map",
+        "configs": {
+            "enableMiniMap": {
+                "type": "toggle",
+                "descCN": "启用小地图",
+                "descEN": "Enable Mini Map",
+                "default": true
+            },
+            "alphaOnMouseEnter": {
+                "type": "slider",
+                "descCN": "鼠标进入时不透明度",
+                "descEN": "Alpha When Mouse Enter",
+                "default": 0.1,
+                "min": 0,
+                "max": 1.0,
+                "decimalPlaces": 2
+            },
+            "miniMapWindowScale": {
+                "type": "slider",
+                "descCN": "小地图窗口缩放",
+                "descEN": "Mini Map Window Scale",
+                "default": 1.6,
+                "min": 0.1,
+                "max": 3.0,
+                "decimalPlaces": 2
+            },
+            "miniMapPositionX": {
+                "type": "slider",
+                "descCN": "小地图位置X",
+                "descEN": "Mini Map Position X",
+                "default": 0.1,
+                "min": 0,
+                "max": 1.0,
+                "decimalPlaces": 3
+            },
+            "miniMapPositionY": {
+                "type": "slider",
+                "descCN": "小地图位置Y",
+                "descEN": "Mini Map Position Y",
+                "default": 0.72,
+                "min": 0,
+                "max": 1.0,
+                "decimalPlaces": 3
+            },
+            "hideDisplayName": {
+                "type": "toggle",
+                "descCN": "隐藏图标名称",
+                "descEN": "Hide Name of Icons",
+                "default": false
+            },
+            "miniMapRotation": {
+                "type": "toggle",
+                "descCN": "小地图旋转",
+                "descEN": "Mini Map Rotation",
+                "default": false
+            },
+            "mapRotation": {
+                "type": "toggle",
+                "descCN": "大地图旋转",
+                "descEN": "Map Rotation",
+                "default": false
+            },
+            "facingBase": {
+                "type": "dropdownList",
+                "descCN": "面向指示基准",
+                "descEN": "Facing Direction Base On",
+                "optionsCN": [ "指针方向", "面朝方向" ],
+                "optionsEN": [ "Mouse", "Face" ],
+                "default": 0
             }
         }
     },
-    "extraConfigs": {
-        "resetAllButton": {
-            "type": "button",
-            "descCN": "重置所有设置",
-            "descEN": "Reset All",
-            "textCN": "重置",
-            "textEN": "Reset"
+    "POI": {
+        "type": "group",
+        "descCN": "单位显示",
+        "descEN": "Position Display",
+        "configs": {
+            "showOnlyActivated": {
+                "type": "toggle",
+                "descCN": "仅显示附近敌人（建议打开）",
+                "descEN": "Show Nearby Only",
+                "default": true
+            },
+            "showPoiInMap": {
+                "type": "toggle",
+                "descCN": "大地图显示敌人位置",
+                "descEN": "Show Enemy In Map",
+                "default": true
+            },
+            "showPoiInMiniMap": {
+                "type": "toggle",
+                "descCN": "小地图显示敌人位置",
+                "descEN": "Show Enemy In Mini Map",
+                "default": true
+            },
+            "showPetPoi": {
+                "type": "toggle",
+                "descCN": "显示宠物图标",
+                "descEN": "Show Your Pet",
+                "default": true
+            },
+            "showBossPoi": {
+                "type": "toggle",
+                "descCN": "显示Boss图标",
+                "descEN": "Show Boss",
+                "default": true
+            },
+            "showEnemyPoi": {
+                "type": "toggle",
+                "descCN": "显示普通敌人图标",
+                "descEN": "Show Enemy",
+                "default": true
+            },
+            "showNeutralPoi": {
+                "type": "toggle",
+                "descCN": "显示中立单位图标",
+                "descEN": "Show Neutral",
+                "default": true
+            }
         }
     },
-    "noUIConfigs": {
-        "displayZoomScale": {
-            "type": "slider",
-            "default": 5.0
-        },
-        "CascadeScalingUnits": {
-            "type": "slider",
-            "default": 2.5
+    "HotKeys": {
+        "type": "group",
+        "descCN": "快捷键",
+        "descEN": "Hot Keys",
+        "configs": {
+            "MiniMapToggleKey": {
+                "type": "keyBinding",
+                "descCN": "小地图开关快捷键",
+                "descEN": "Toggle Mini Map Hot Key",
+                "default": "Digit9"
+            },
+            "MiniMapZoomInKey": {
+                "type": "keyBinding",
+                "descCN": "小地图放大快捷键",
+                "descEN": "Mini Map Zoom In Hot Key",
+                "default": "Equals"
+            },
+            "MiniMapZoomOutKey": {
+                "type": "keyBinding",
+                "descCN": "小地图缩小快捷键",
+                "descEN": "Mini Map Zoom Out Hot Key",
+                "default": "Minus"
+            }
         }
+    },
+    "Compatibility.BetterMapMarker": {
+        "type": "group",
+        "descCN": "兼容性-标记所有箱子",
+        "descEN": "Compatibility-BetterMapMarker",
+        "configs": {
+            "betterMapMarker.showInMiniMap": {
+                "type": "toggle",
+                "descCN": "在小地图中显示（不建议开启）",
+                "descEN": "Show In Mini Map",
+                "default": false
+            },
+            "betterMapMarker.poiScaleFactor": {
+                "type": "slider",
+                "descCN": "图标缩放系数",
+                "descEN": "Icon Scale Factor",
+                "default": 1,
+                "min": 0.1,
+                "max": 2.0,
+                "decimalPlaces": 2
+            }
+        }
+    },
+    "Compatibility.ShoulderSurfing": {
+        "type": "group",
+        "descCN": "兼容性-第三人称越肩视角",
+        "descEN": "Compatibility-ShoulderSurfing",
+        "configs": {
+            "shoulderSurfing.showPlayerArrow": {
+                "type": "toggle",
+                "descCN": "显示玩家指示器",
+                "descEN": "Show Player Arrow",
+                "default": false
+            }
+        }
+    },
+    "Compatibility.BossLiveMap": {
+        "type": "group",
+        "descCN": "兼容性-Boss实时地图标记",
+        "descEN": "Compatibility-BossLiveMap",
+        "configs": {
+            "bossLiveMap.poiScaleFactor": {
+                "type": "slider",
+                "descCN": "图标缩放系数",
+                "descEN": "Icon Scale Factor",
+                "default": 1,
+                "min": 0.1,
+                "max": 2.0,
+                "decimalPlaces": 2
+            }
+        }
+    },
+    "resetAllButton": {
+        "type": "button",
+        "descCN": "重置所有设置",
+        "descEN": "Reset All",
+        "textCN": "重置",
+        "textEN": "Reset"
+    },
+    "displayZoomScale": {
+        "type": "noUI",
+        "default": 5.0
+    },
+    "CascadeScalingUnits": {
+        "type": "noUI",
+        "default": 2.5
     }
 }

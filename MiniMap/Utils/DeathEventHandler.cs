@@ -10,6 +10,7 @@ namespace MiniMap.Utils
     /// 监听 Health.OnDead 事件，在角色死亡时清理对应的POI
     /// 替代原有的每帧死亡检查，提升性能
     /// </summary>
+	[Log(LogOutput.Output, LogOutput.Output, LogLevel.Debug, LogLevel.Debug)]
     public static class DeathEventHandler
     {
         private static bool _initialized = false;
@@ -27,11 +28,11 @@ namespace MiniMap.Utils
                 // 订阅全局死亡事件
                 Health.OnDead += OnCharacterDied;
                 _initialized = true;
-                ModBehaviour.Logger.Log("死亡事件处理器已初始化");
+                Log.Info("死亡事件处理器已初始化");
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"死亡事件处理器初始化失败: {e.Message}");
+                Log.Error($"死亡事件处理器初始化失败: {e.Message}");
             }
         }
 
@@ -48,11 +49,11 @@ namespace MiniMap.Utils
                 // 取消订阅全局死亡事件
                 Health.OnDead -= OnCharacterDied;
                 _initialized = false;
-                ModBehaviour.Logger.Log("死亡事件处理器已清理");
+                Log.Info("死亡事件处理器已清理");
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"死亡事件处理器清理失败: {e.Message}");
+                Log.Error($"死亡事件处理器清理失败: {e.Message}");
             }
         }
 
@@ -69,7 +70,7 @@ namespace MiniMap.Utils
                 // 空值检查
                 if (health == null)
                 {
-                    ModBehaviour.Logger.LogWarning("死亡事件: Health为空");
+                    Log.Warning("死亡事件: Health为空");
                     return;
                 }
 
@@ -77,14 +78,14 @@ namespace MiniMap.Utils
                 CharacterMainControl? character = health.TryGetCharacter();
                 if (character == null)
                 {
-                    ModBehaviour.Logger.LogWarning($"死亡事件: 无法获取角色，Health={health.GetInstanceID()}");
+                    Log.Warning($"死亡事件: 无法获取角色，Health={health.GetInstanceID()}");
                     return;
                 }
 
                 // 跳过玩家角色（玩家死亡时不清理POI）
                 if (character.IsMainCharacter)
                 {
-                    ModBehaviour.Logger.Log("玩家死亡，保留POI");
+                    Log.Info("玩家死亡，保留POI");
                     return;
                 }
 
@@ -94,7 +95,7 @@ namespace MiniMap.Utils
                 {
                     // 销毁POI游戏对象（会自动触发OnDestroy和PointsOfInterests.Unregister）
                     GameObject.Destroy(poi.gameObject);
-                    ModBehaviour.Logger.Log($"已销毁位置图标POI: {character.name}");
+                    Log.Info($"已销毁位置图标POI: {character.name}");
                 }
 
                 // 清理方向箭头POI
@@ -103,18 +104,18 @@ namespace MiniMap.Utils
                 {
                     // 销毁方向箭头游戏对象
                     GameObject.Destroy(dirPoi.gameObject);
-                    ModBehaviour.Logger.Log($"已销毁方向箭头POI: {character.name}");
+                    Log.Info($"已销毁方向箭头POI: {character.name}");
                 }
 
                 // 如果POI组件不存在，记录警告（可能是角色生成时未创建POI）
                 if (poi == null && dirPoi == null)
                 {
-                    ModBehaviour.Logger.LogWarning($"角色 {character.name} 死亡，但未找到POI组件");
+                    Log.Warning($"角色 {character.name} 死亡，但未找到POI组件");
                 }
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"处理死亡事件时出错: {e.Message}");
+                Log.Error($"处理死亡事件时出错: {e.Message}");
             }
         }
     }

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using ZoinkModdingLibrary.Attributes;
 using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Compatibility.BetterMapMarker.Patchers
 {

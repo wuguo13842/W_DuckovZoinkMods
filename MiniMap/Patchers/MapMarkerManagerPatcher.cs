@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.Logging;
 using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Patchers
 {
@@ -23,7 +25,7 @@ namespace MiniMap.Patchers
         [MethodPatcher("Load", PatchType.Postfix, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)]
         public static void LoadPostfix(MapMarkerManager __instance)
         {
-            ModBehaviour.Logger.Log("MapMarkerManagers Loaded");
+            Log.Info("MapMarkerManagers Loaded");
             MinimapManager.MinimapDisplay.InvokeMethod("HandlePointsOfInterests");
         }
     }

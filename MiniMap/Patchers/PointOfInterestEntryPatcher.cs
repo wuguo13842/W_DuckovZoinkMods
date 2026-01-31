@@ -1,6 +1,5 @@
 ﻿using Duckov.MiniMaps;
 using Duckov.MiniMaps.UI;
-using Duckov.Utilities;
 using MiniMap.Managers;
 using MiniMap.Poi;
 using System;
@@ -11,7 +10,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UI.ProceduralImage;
 using ZoinkModdingLibrary.Attributes;
+using ZoinkModdingLibrary.ModSettings;
 using ZoinkModdingLibrary.Patcher;
+using ZoinkModdingLibrary.Utils;
 
 namespace MiniMap.Patchers
 {
@@ -48,8 +49,8 @@ public static bool UpdateScalePrefix(
             d = characterPoi?.IconSize ?? d;
         }
 		
-        float displayZoomScale = ModSettingManager.GetValue("displayZoomScale", 5f);
-		float CascadeScalingUnits = ModSettingManager.GetValue("CascadeScalingUnits", 2.5f);
+        float displayZoomScale = ModSettingManager.GetValue(ModBehaviour.ModInfo, "displayZoomScale", 5f);
+		float CascadeScalingUnits = ModSettingManager.GetValue(ModBehaviour.ModInfo, "CascadeScalingUnits", 2.5f);
 
         // 获取父对象缩放
         float parentLocalScale = __instance.transform.parent.localScale.x;
@@ -181,14 +182,14 @@ public static bool UpdateScalePrefix(
             ___areaDisplay.FalloffDistance = 1f / parentLocalScale;
         }
 
-        return false;
-    }
-    catch (Exception e)
-    {
-        ModBehaviour.Logger.LogError($"UpdateScalePrefix failed: {e.Message}");
-        return true;
-    }
-}
+                return false;
+            }
+            catch (Exception e)
+            {
+                Log.Error($"UpdateScalePrefix failed: {e.Message}");
+                return true;
+            }
+        }
 
         [MethodPatcher("UpdateRotation", PatchType.Prefix, BindingFlags.Instance | BindingFlags.NonPublic)]
         public static bool UpdateRotationPrefix(CharacterPoiEntry __instance, MiniMapDisplayEntry ___minimapEntry)
@@ -209,7 +210,7 @@ public static bool UpdateScalePrefix(
             }
             catch (Exception e)
             {
-                ModBehaviour.Logger.LogError($"PointOfInterestEntry UpdateRotation failed: {e.Message}");
+                Log.Error($"PointOfInterestEntry UpdateRotation failed: {e.Message}");
                 return true;
             }
         }
@@ -219,7 +220,7 @@ public static bool UpdateScalePrefix(
         {
             if (__instance.Target == null || __instance.Target.IsDestroyed())
             {
-                GameObject.Destroy(__instance.gameObject);
+                __instance.gameObject.SetActive(false);
                 return false;
             }
             //if (___master == MinimapManager.MinimapDisplay && !(__instance.Target?.gameObject.activeInHierarchy ?? false))
@@ -233,7 +234,7 @@ public static bool UpdateScalePrefix(
                 {
                     ___icon.color = poi.Color;
                 }
-                ___displayName.text = ___master == MinimapManager.MinimapDisplay && ModSettingManager.GetValue("hideDisplayName", false) ? "" : poi.DisplayName;
+                ___displayName.text = ___master == MinimapManager.MinimapDisplay && ModSettingManager.GetValue(ModBehaviour.ModInfo, "hideDisplayName", false) ? "" : poi.DisplayName;
             }
             RectTransform icon = ___icon.rectTransform;
             RectTransform? layout = icon.parent as RectTransform;
