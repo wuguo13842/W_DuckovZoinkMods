@@ -39,9 +39,13 @@ namespace MiniMap
             MiniMapDisplayEntryPatcher.Instance,
         };
 
+        // 注意：这个方法被其他兼容性补丁调用，不能直接删除
+        // 但可以简化内部实现，减少反射使用
         public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
         {
-            MethodInfo originMethod = targetType.GetMethod(methodName, bindFlags);
+            // 使用Harmony的AccessTools替代反射的GetMethod
+            // AccessTools是Harmony内置的工具类，更稳定
+            var originMethod = HarmonyLib.AccessTools.Method(targetType, methodName);
             if (originMethod == null)
             {
                 Debug.LogWarning($"[{MOD_NAME}] Original method not found: {targetType.Name}.{methodName}");
@@ -50,36 +54,50 @@ namespace MiniMap
 
             try
             {
-                MethodInfo prefix = extenderType.GetMethod("Prefix", BindingFlags.Static | BindingFlags.Public);
-                MethodInfo postfix = extenderType.GetMethod("Postfix", BindingFlags.Static | BindingFlags.Public);
-                MethodInfo transpiler = extenderType.GetMethod("Transpiler", BindingFlags.Static | BindingFlags.Public);
-                MethodInfo finalizer = extenderType.GetMethod("Finalizer", BindingFlags.Static | BindingFlags.Public);
+                // 使用Harmony的AccessTools获取补丁方法
+                var prefix = HarmonyLib.AccessTools.Method(extenderType, "Prefix");
+                var postfix = HarmonyLib.AccessTools.Method(extenderType, "Postfix");
+                var transpiler = HarmonyLib.AccessTools.Method(extenderType, "Transpiler");
+                var finalizer = HarmonyLib.AccessTools.Method(extenderType, "Finalizer");
+                
                 Harmony.Unpatch(originMethod, HarmonyPatchType.All, Harmony.Id);
+                
+                // 使用Harmony的Patch方法，而不是直接操作MethodInfo
                 Harmony.Patch(
                     originMethod,
-                    prefix != null ? new HarmonyMethod(prefix) : null,
-                    postfix != null ? new HarmonyMethod(postfix) : null,
-                    transpiler != null ? new HarmonyMethod(transpiler) : null,
-                    finalizer != null ? new HarmonyMethod(finalizer) : null
+                    prefix: prefix != null ? new HarmonyMethod(prefix) : null,
+                    postfix: postfix != null ? new HarmonyMethod(postfix) : null,
+                    transpiler: transpiler != null ? new HarmonyMethod(transpiler) : null,
+                    finalizer: finalizer != null ? new HarmonyMethod(finalizer) : null
                 );
                 return true;
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[{MOD_NAME}] Failed to patch {originMethod}: {ex.Message}");
+                Debug.LogError($"[{MOD_NAME}] Failed to patch {originMethod.Name}: {ex.Message}");
                 return false;
             }
         }
 
+        // 这个方法可以被简化或删除，因为很少使用
         public bool UnpatchSingleExtender(string assembliyName, string targetTypeName, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
         {
-            Type? targetType = AssemblyOperations.FindTypeInAssemblies(assembliyName, targetTypeName);
+            // 使用Type.GetType替代AssemblyOperations.FindTypeInAssemblies
+            Type targetType = Type.GetType($"{targetTypeName}, {assembliyName}");
             if (targetType == null)
             {
                 Debug.LogWarning($"[{MOD_NAME}] Target Type \"{targetTypeName}\" Not Found!");
                 return false;
             }
-            MethodInfo originMethod = targetType.GetMethod(methodName, bindFlags);
+            
+            // 使用Harmony的AccessTools替代反射
+            var originMethod = HarmonyLib.AccessTools.Method(targetType, methodName);
+            if (originMethod == null)
+            {
+                Debug.LogWarning($"[{MOD_NAME}] Method \"{methodName}\" not found in {targetTypeName}");
+                return false;
+            }
+            
             Harmony.Unpatch(originMethod, HarmonyPatchType.All, MOD_ID);
             return true;
         }
@@ -129,15 +147,15 @@ namespace MiniMap
             try
             {
                 ApplyHarmonyPatchers();
-				DeathEventHandler.Initialize(); // 初始化死亡事件处理器
+                DeathEventHandler.Initialize(); // 初始化死亡事件处理器
                 LevelManager.OnEvacuated += OnEvacuated;
                 
                 //SceneLoader.onFinishedLoadingScene += PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized += PoiManager.OnLenvelIntialized;
-				//SceneLoader.onStartedLoadingScene += onStartedLoadingScene;  // 场景加载流程开始时，在显示加载界面之前
-				SceneLoader.onFinishedLoadingScene += onFinishedLoadingScene;  // 场景已经加载完成（资源加载完毕），但还没有被设置为活动场景之前
-				//SceneLoader.onBeforeSetSceneActive += OnBeforeSetSceneActive;  // 新场景已经被设置为活动场景，初始化完成后
-				//SceneLoader.onAfterSceneInitialize += OnAfterSceneInitialize;  // 整个场景加载流程完全结束，包括所有过渡动画完成后
+                //SceneLoader.onStartedLoadingScene += onStartedLoadingScene;  // 场景加载流程开始时，在显示加载界面之前
+                SceneLoader.onFinishedLoadingScene += onFinishedLoadingScene;  // 场景已经加载完成（资源加载完毕），但还没有被设置为活动场景之前
+                //SceneLoader.onBeforeSetSceneActive += OnBeforeSetSceneActive;  // 新场景已经被设置为活动场景，初始化完成后
+                //SceneLoader.onAfterSceneInitialize += OnAfterSceneInitialize;  // 整个场景加载流程完全结束，包括所有过渡动画完成后
 
             }
             catch (Exception e)
@@ -158,10 +176,10 @@ namespace MiniMap
                 CancelHarmonyPatchers();
                 DeathEventHandler.Cleanup(); // 清理死亡事件处理器
                 LevelManager.OnEvacuated -= OnEvacuated;
-				
+                
                 //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
                 //LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
-				SceneLoader.onStartedLoadingScene -= onFinishedLoadingScene;
+                SceneLoader.onStartedLoadingScene -= onFinishedLoadingScene;
                 MinimapManager.Destroy();
                 Log.Info($"disable mod {MOD_NAME}");
             }
@@ -181,8 +199,8 @@ namespace MiniMap
         {
             Log.Info("$SettingManager初始化成功，开始创建UI");
             ModSettingManager.CreateUI(ModInfo);
-			MinimapManager.Initialize();
-		}
+            MinimapManager.Initialize();
+        }
 
         void Update()
         {
@@ -198,13 +216,13 @@ namespace MiniMap
                 Log.Error($"更新失败: {e}");
             }
         }
-		
-		private static void onFinishedLoadingScene(SceneLoadingContext context)
-		{
+        
+        private static void onFinishedLoadingScene(SceneLoadingContext context)
+        {
             if (string.IsNullOrEmpty(context.sceneName)) return;
                 
-			// 预加载场景中心点（触发缓存填充）
-			Duckov.MiniMaps.UI.CharacterPoiEntry.GetSceneCenterFromSettings(context.sceneName);
-		}
+            // 预加载场景中心点（触发缓存填充）
+            Duckov.MiniMaps.UI.CharacterPoiEntry.GetSceneCenterFromSettings(context.sceneName);
+        }
     }
 }

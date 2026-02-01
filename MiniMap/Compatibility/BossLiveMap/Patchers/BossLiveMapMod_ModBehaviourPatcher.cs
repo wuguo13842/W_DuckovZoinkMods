@@ -48,7 +48,7 @@ namespace MiniMap.Compatibility.BetterMapMarker.Patchers
             {
                 name = "<s>" + name + "</s>";
             }
-            Type? modType = AssemblyOperations.FindTypeInAssemblies("BossLiveMapMod", "BossLiveMapMod.ModBehaviour");
+            Type modType = Type.GetType("BossLiveMapMod.ModBehaviour, BossLiveMapMod");
             Color color = modType?.InvokeMethod<Color>("GetBossListTextColor", parameters: new object[] { entry }) ?? Color.white;
 
             string colorHex = ColorUtility.ToHtmlStringRGBA(color);
