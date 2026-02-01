@@ -6,6 +6,8 @@ namespace MiniMap.Utils
     public static class MiniMapCommon
     {
         public const float originMapZRotation = -30f;
+		public const float CascadeScalingUnits = 2.5f;
+		public const float CenterIconSize = 1.3f;
 
         private static float GetAngle()
         {

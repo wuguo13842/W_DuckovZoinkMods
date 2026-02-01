@@ -209,9 +209,5 @@
     "displayZoomScale": {
         "type": "noUI",
         "default": 5.0
-    },
-    "CascadeScalingUnits": {
-        "type": "noUI",
-        "default": 2.5
     }
 }
