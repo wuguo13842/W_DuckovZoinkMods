@@ -167,7 +167,7 @@ namespace MiniMap.Managers
                 bool enabled = ModSettingManager.GetValue<bool>(ModBehaviour.ModInfo, "enableMiniMap");
                 isEnabled = enabled;
                 isToggled = enabled;
-                customCanvas?.SetActive(isEnabled);
+                customCanvas?.SetActive(isEnabled && LevelManager.Instance != null);
             }
             catch (Exception e)
             {
