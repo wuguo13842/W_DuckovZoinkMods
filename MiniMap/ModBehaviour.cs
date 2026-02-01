@@ -39,45 +39,30 @@ namespace MiniMap
             MiniMapDisplayEntryPatcher.Instance,
         };
 
-        // 注意：这个方法被其他兼容性补丁调用，不能直接删除
-        // 但可以简化内部实现，减少反射使用
-        public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
-        {
-            // 使用Harmony的AccessTools替代反射的GetMethod
-            // AccessTools是Harmony内置的工具类，更稳定
-            var originMethod = HarmonyLib.AccessTools.Method(targetType, methodName);
-            if (originMethod == null)
-            {
-                Debug.LogWarning($"[{MOD_NAME}] Original method not found: {targetType.Name}.{methodName}");
-                return false;
-            }
-
-            try
-            {
-                // 使用Harmony的AccessTools获取补丁方法
-                var prefix = HarmonyLib.AccessTools.Method(extenderType, "Prefix");
-                var postfix = HarmonyLib.AccessTools.Method(extenderType, "Postfix");
-                var transpiler = HarmonyLib.AccessTools.Method(extenderType, "Transpiler");
-                var finalizer = HarmonyLib.AccessTools.Method(extenderType, "Finalizer");
-                
-                Harmony.Unpatch(originMethod, HarmonyPatchType.All, Harmony.Id);
-                
-                // 使用Harmony的Patch方法，而不是直接操作MethodInfo
-                Harmony.Patch(
-                    originMethod,
-                    prefix: prefix != null ? new HarmonyMethod(prefix) : null,
-                    postfix: postfix != null ? new HarmonyMethod(postfix) : null,
-                    transpiler: transpiler != null ? new HarmonyMethod(transpiler) : null,
-                    finalizer: finalizer != null ? new HarmonyMethod(finalizer) : null
-                );
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[{MOD_NAME}] Failed to patch {originMethod.Name}: {ex.Message}");
-                return false;
-            }
-        }
+		[Obsolete("请使用预定义的补丁列表，这个方法仅用于兼容性")]
+		public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
+		{
+			Log.Warning($"使用动态补丁方法，建议迁移到预定义补丁列表");
+			
+			try
+			{
+				// 简化版本，只做基本检查
+				var originMethod = HarmonyLib.AccessTools.Method(targetType, methodName);
+				if (originMethod == null) return false;
+				
+				// 让Harmony处理大部分工作
+				Harmony.Patch(originMethod, 
+					prefix: new HarmonyMethod(extenderType, "Prefix"),
+					postfix: new HarmonyMethod(extenderType, "Postfix")
+				);
+				
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
+		}
 
         // 这个方法可以被简化或删除，因为很少使用
         public bool UnpatchSingleExtender(string assembliyName, string targetTypeName, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)

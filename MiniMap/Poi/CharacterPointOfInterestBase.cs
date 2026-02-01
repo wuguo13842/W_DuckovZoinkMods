@@ -114,8 +114,7 @@ namespace MiniMap.Poi
             this.character = character;
             this.characterType = characterType;
             this.icon = GameObject.Instantiate(poi.Icon);
-            FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
-            this.cachedName = field.GetValue(poi) as string;
+            this.cachedName = poi.DisplayName;
             this.followActiveScene = followActiveScene;
             this.overrideSceneID = overrideSceneID;
             this.isArea = poi.IsArea;
