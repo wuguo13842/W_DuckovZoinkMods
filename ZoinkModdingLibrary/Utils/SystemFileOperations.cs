@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Unity.VisualScripting;
 using ZoinkModdingLibrary.Logging;
 
 namespace ZoinkModdingLibrary.Utils
 {
-    public class SystemFileOperations
+    public static class SystemFileOperations
     {
         public static bool IsFolderEmpty(string folderPath)
         {
@@ -131,6 +132,20 @@ namespace ZoinkModdingLibrary.Utils
                 }
             }
             Log.Warning($"文件复制完毕");
+        }
+
+        public static bool Rename(this FileInfo file, string newName)
+        {
+            try
+            {
+                file.MoveTo(Path.Combine(file.Directory.FullName, newName));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"重命名文件失败 {file.FullName}: {ex.Message}");
+                return false;
+            }
         }
     }
 }

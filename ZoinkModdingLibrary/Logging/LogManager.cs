@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sirenix.Utilities;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -26,7 +27,7 @@ namespace ZoinkModdingLibrary.Logging
         private LogManager()
         {
             // 初始化全局配置
-            _globalConfig.MaxLogFiles = 2;
+            _globalConfig.MaxLogFiles = 3;
             _globalConfig.LogBatchSize = 100;
             _globalConfig.LogFlushInterval = 5000;
 
@@ -72,20 +73,20 @@ namespace ZoinkModdingLibrary.Logging
                 foreach (var group in groupedLogs)
                 {
                     UnityEngine.Debug.LogWarning($"Group: {group.Key}");
-                    string assemblyDir = group.Key;
+                    string logDir = group.Key;
                     List<LogData> logDatas = group.ToList();
 
-                    if (!Directory.Exists(assemblyDir))
-                        Directory.CreateDirectory(assemblyDir);
+                    if (!Directory.Exists(logDir))
+                        Directory.CreateDirectory(logDir);
 
-                    if (!_logFiles.TryGetValue(assemblyDir, out string logFileName))
+                    if (!_logFiles.TryGetValue(logDir, out string logFileName))
                     {
-                        logFileName = $"Log_{DateTime.Now:yyyyMMddHHmmss}.log";
-                        _logFiles[assemblyDir] = logFileName;
-                        CleanupOldLogs(assemblyDir, _globalConfig.MaxLogFiles);
+                        logFileName = $"Log_Last.log";
+                        _logFiles[logDir] = logFileName;
+                        CleanupOldLogs(logDir, _globalConfig.MaxLogFiles);
                     }
 
-                    var logFilePath = Path.Combine(assemblyDir, logFileName);
+                    var logFilePath = Path.Combine(logDir, logFileName);
 
                     lock (_fileLock)
                     {
@@ -119,14 +120,14 @@ namespace ZoinkModdingLibrary.Logging
         {
             try
             {
-                var logFiles = new DirectoryInfo(logDir)
+                List<FileInfo> logFiles = new DirectoryInfo(logDir)
                     .GetFiles("*.log")
-                    .OrderByDescending(f => f.CreationTime)
+                    .OrderBy(f => f.CreationTime)
                     .ToList();
 
-                while (logFiles.Count > maxFiles)
+                while (logFiles.Count >= maxFiles)
                 {
-                    var oldestFile = logFiles.Last();
+                    var oldestFile = logFiles.First();
                     try
                     {
                         oldestFile.Delete();
@@ -140,6 +141,13 @@ namespace ZoinkModdingLibrary.Logging
                         _logQueue.Enqueue(GetLogData(errorLog, LogLevel.Error));
                         break;
                     }
+                }
+                int postfix = logFiles.Count;
+                foreach (FileInfo logFile in logFiles)
+                {
+                    string newName = "Log_Prev" + (logFiles.Count > 1 ? $"_{postfix}" : "");
+                    logFile.Rename($"{newName}.log");
+                    postfix--;
                 }
             }
             catch (Exception ex)
