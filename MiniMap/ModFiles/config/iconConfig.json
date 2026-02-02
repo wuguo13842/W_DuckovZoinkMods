@@ -1,4 +1,6 @@
 {
+    "cascadeScalingUnits": 2.0,
+    "centerIconSize": 1.0,
     "friendly": {
         "defaultIcon": "MiniMap_FriendlyIcon.png",
         "scale": 0.55,
@@ -24,7 +26,7 @@
     },
     "boss": {
         "defaultIcon": "MiniMap_BossIcon.png",
-        "scale": 0.8,
+        "scale": 0.9,
         "EnemyPreset_BossMelee_SchoolBully": "",
         "EnemyPreset_Boss_3Shot": "",
         "EnemyPreset_Boss_Arcade": "",
@@ -52,5 +54,5 @@
         "EnemyPreset_Boss_Speedy_Ice": ""
     },
     "defaultIcon": "MiniMap_EnemyIcon.png",
-    "defaultScale": 0.6
+    "defaultScale": 0.55
 }
