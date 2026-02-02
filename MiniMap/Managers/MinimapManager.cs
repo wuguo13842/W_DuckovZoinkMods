@@ -243,7 +243,7 @@ namespace MiniMap.Managers
             if (!HasMap())
                 return;
             float displayZoomScale = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
-            float miniMapZoomStep = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "miniMapZoomStep");
+            float miniMapZoomStep = 0.1f;
             displayZoomScale += symbol * miniMapZoomStep;
             displayZoomScale = Mathf.Clamp(displayZoomScale, displayZoomRange.x, displayZoomRange.y);
             ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", displayZoomScale);
@@ -702,6 +702,9 @@ namespace MiniMap.Managers
         // 新增的 Input System 相关字段
         private static Key _zoomInKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapZoomInKey");
         private static Key _zoomOutKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapZoomOutKey");
+		// private static Key _zoomInKey = Key.Equals;
+        // private static Key _zoomOutKey = Key.Minus;
+		
         private static InputAction? _toggleAction;       // 切换小地图显示/隐藏的按键动作
         private static InputAction? _zoomInAction;       // 放大按键动作
         private static InputAction? _zoomOutAction;      // 缩小按键动作
@@ -785,6 +788,7 @@ namespace MiniMap.Managers
         /// </summary>
         private static void OnZoomInStarted(InputAction.CallbackContext context)
         {
+			Log.Info($"放大按键：默认 = 键");
             CancelZoomIn();  // 取消可能还在运行的放大任务
             _zoomInCTS = new CancellationTokenSource();  // 创建新的取消令牌源
             ZoomThrottleLoop(1, _zoomInCTS.Token, _zoomOutKey).Forget();  // 启动缩放控制任务（1 = 放大方向）
@@ -805,6 +809,7 @@ namespace MiniMap.Managers
         /// </summary>
         private static void OnZoomOutStarted(InputAction.CallbackContext context)
         {
+			Log.Info($"缩小按键：默认 - 键");
             CancelZoomOut();  // 取消可能还在运行的缩小任务
             _zoomOutCTS = new CancellationTokenSource();  // 创建新的取消令牌源
             ZoomThrottleLoop(-1, _zoomOutCTS.Token, _zoomInKey).Forget();  // 启动缩放控制任务（-1 = 缩小方向）
@@ -873,6 +878,7 @@ namespace MiniMap.Managers
                         await UniTask.Delay(100, DelayType.Realtime, PlayerLoopTiming.Update, token);
                         continue;
                     }
+					// Log.Info($"放大缩小循环");
                     await UniTask.SwitchToMainThread(); // 回到主线程
                     DisplayZoom(direction);  // 执行节流缩放
                     await UniTask.Delay(20, DelayType.Realtime, PlayerLoopTiming.Update, token);
