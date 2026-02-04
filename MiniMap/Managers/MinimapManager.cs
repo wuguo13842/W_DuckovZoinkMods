@@ -21,6 +21,8 @@ using ZoinkModdingLibrary.Extentions;
 using ZoinkModdingLibrary.GameUI;
 using ZoinkModdingLibrary.ModSettings;
 using ZoinkModdingLibrary.Utils;
+using System.Linq;
+using Duckov.Scenes;
 
 namespace MiniMap.Managers
 {
@@ -80,6 +82,7 @@ namespace MiniMap.Managers
             ModSettingManager.ButtonClicked += OnButtonClicked;
             SceneManager.sceneLoaded += OnSceneLoaded;
             SceneLoader.onFinishedLoadingScene += onFinishedLoadingScene;
+			SceneLoader.onAfterSceneInitialize += OnAfterSceneInitialize;  // 整个场景加载流程完全结束，包括所有过渡动画完成后  不要动测试必须是OnAfterSceneInitialize， MultiSceneCore.ActiveSubSceneID才生效
 
             IsInitialized = true;
         }
@@ -94,9 +97,74 @@ namespace MiniMap.Managers
             ModSettingManager.ButtonClicked -= OnButtonClicked;
             SceneManager.sceneLoaded -= OnSceneLoaded;
             SceneLoader.onFinishedLoadingScene -= onFinishedLoadingScene;
+			SceneLoader.onAfterSceneInitialize -= OnAfterSceneInitialize;
 
             IsInitialized = false;
         }
+		
+		private static void OnAfterSceneInitialize(SceneLoadingContext context) //不要动测试必须是OnAfterSceneInitialize， MultiSceneCore.ActiveSubSceneID才生效
+		{
+			try
+			{
+				Log.Info($"调整缩放范围 - 主场景: {context.sceneName}");
+				
+				if (MiniMapSettings.Instance == null) 
+				{
+					Log.Warning("MiniMapSettings 未初始化");
+					return;
+				}
+				
+				// 使用活动子场景ID，而不是主场景ID
+				string mapSceneID = MultiSceneCore.ActiveSubSceneID;
+				
+				if (string.IsNullOrEmpty(mapSceneID))
+				{
+					Log.Warning("没有活动子场景ID");
+					displayZoomRange = new Vector2(0.25f, 4f);
+					return;
+				}
+				
+				Log.Info($"查找地图数据 - 子场景: {mapSceneID}");
+				
+				var map = MiniMapSettings.Instance.maps.FirstOrDefault(e => e.sceneID == mapSceneID);
+				
+				if (map != null && map.imageWorldSize > 0)
+				{
+					float minZoom = Mathf.Clamp(0.25f * (1000f / map.imageWorldSize), 0.25f, 4f); // 限制在0.25-4倍
+					displayZoomRange = new Vector2(minZoom, 4F);
+					Log.Info($"成功: {map.sceneID} = {map.imageWorldSize:F0}米 -> 缩放: {minZoom:F2}x-4");
+				
+					AdjustCurrentZoomToRange(minZoom, 4f); // 调整当前缩放
+				}
+				else
+				{
+					Log.Warning($"未找到 {mapSceneID} 的地图配置");
+					displayZoomRange = new Vector2(0.25f, 4f);
+				}
+			}
+			catch (Exception e)
+			{
+				Log.Error($"错误: {e.Message}");
+				displayZoomRange = new Vector2(0.25f, 4f);
+			}
+		}
+		
+		private static void AdjustCurrentZoomToRange(float minZoom, float maxZoom)
+		{
+			try
+			{
+				float currentZoom = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
+				float clampedZoom = Mathf.Clamp(currentZoom, minZoom, maxZoom);
+				
+				if (Mathf.Abs(currentZoom - clampedZoom) > 0.01f)
+				{
+					ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", clampedZoom);
+					UpdateDisplayZoom();
+					Log.Info($"缩放调整: {currentZoom:F2}x → {clampedZoom:F2}x");
+				}
+			}
+			catch { }
+		}
 
         private static void onFinishedLoadingScene(SceneLoadingContext context)
         {    
