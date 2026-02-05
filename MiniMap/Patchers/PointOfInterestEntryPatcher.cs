@@ -64,7 +64,8 @@ namespace MiniMap.Patchers
 							// Log.Info($"是否角色POI: {isCharacterPoi}");
 							___iconContainer.gameObject.SetActive(true);
 							
-							bool shouldShowName = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale") >= 0.4f / ((1000f + MinimapManager.CurrentMapWorldSize) / 2000f);
+							// bool shouldShowName = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale") >= 0.5f / ((1000f + MinimapManager.CurrentMapWorldSize) / 2000f);
+							bool shouldShowName = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale") >= 0.4f / ( MinimapManager.CurrentMapWorldSize / 1000f);
 							
 							if (shouldShowName)
 							{
@@ -97,7 +98,8 @@ namespace MiniMap.Patchers
 							// 图标容器显示/隐藏
 							if (type == CharacterType.Enemy || type == CharacterType.NPC || type == CharacterType.Neutral)
 							{
-								___iconContainer.gameObject.SetActive(ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale") >= 0.8f / ((1000f + MinimapManager.CurrentMapWorldSize) / 2000f));
+								// ___iconContainer.gameObject.SetActive(ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale") >= 0.8f / ((1000f + MinimapManager.CurrentMapWorldSize) / 2000f));
+								___iconContainer.gameObject.SetActive(ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale") >= 0.8f / ( MinimapManager.CurrentMapWorldSize / 1000f));
 							}
 							else
 							{
