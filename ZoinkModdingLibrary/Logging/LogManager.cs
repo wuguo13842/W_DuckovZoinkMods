@@ -234,25 +234,53 @@ namespace ZoinkModdingLibrary.Logging
 
             if (fileOutput == LogOutput.Output && level <= fileLevel)
             {
-                string outputDir = methodAttribute?.OutputDir ?? string.Empty;
-                if (string.IsNullOrEmpty(outputDir))
+                // 检查 Mod 目录下是否有 WWSSADADBA 文件
+                bool enableFileLogging = false;
+                try
                 {
-                    outputDir = typeAttribute?.OutputDir ?? string.Empty;
-                    if (string.IsNullOrEmpty(outputDir))
+                    // 获取 Mod DLL 所在目录
+                    string modDirectory = Path.GetDirectoryName(callerAssembly?.Location);
+                    if (!string.IsNullOrEmpty(modDirectory))
                     {
-                        outputDir = assemblyAttribute?.OutputDir ?? string.Empty;
-                        if (string.IsNullOrEmpty(outputDir))
+                        string debugFilePath = Path.Combine(modDirectory, "WWSSADADBA");
+                        enableFileLogging = File.Exists(debugFilePath);
+                        
+                        // 可选：输出调试信息
+                        if (enableFileLogging)
                         {
-                            outputDir = Path.GetDirectoryName((callerAssembly ?? Assembly.GetExecutingAssembly()).Location);
+                            UnityEngine.Debug.Log($"[LogManager] 检测到 {debugFilePath}，为 {assemblyName} 启用文件日志");
                         }
                     }
                 }
-
-                _logQueue.Enqueue(new LogData(assemblyName, outputDir, level, logContent));
-                // 达到批量写入阈值时，触发写入事件
-                if (_logQueue.Count >= _globalConfig.LogBatchSize)
+                catch (Exception ex)
                 {
-                    _logEvent.Set();
+                    UnityEngine.Debug.LogWarning($"[LogManager] 检查调试文件失败: {ex.Message}");
+                    enableFileLogging = false;
+                }
+
+                // 只有在检测到 WWSSADADBA 文件时才写入文件日志
+                if (enableFileLogging)
+                {
+                    string outputDir = methodAttribute?.OutputDir ?? string.Empty;
+                    if (string.IsNullOrEmpty(outputDir))
+                    {
+                        outputDir = typeAttribute?.OutputDir ?? string.Empty;
+                        if (string.IsNullOrEmpty(outputDir))
+                        {
+                            outputDir = assemblyAttribute?.OutputDir ?? string.Empty;
+                            if (string.IsNullOrEmpty(outputDir))
+                            {
+                                outputDir = Path.GetDirectoryName((callerAssembly ?? Assembly.GetExecutingAssembly()).Location);
+                            }
+                        }
+                    }
+
+                    _logQueue.Enqueue(new LogData(assemblyName, outputDir, level, logContent));
+                    // 达到批量写入阈值时，触发写入事件
+                    if (_logQueue.Count >= _globalConfig.LogBatchSize)
+                    {
+                        _logEvent.Set();
+                    }
                 }
             }
         }

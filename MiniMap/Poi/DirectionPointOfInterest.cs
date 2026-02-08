@@ -1,5 +1,6 @@
 ﻿using MiniMap.Utils;
 using UnityEngine;
+using Duckov; 
 
 namespace MiniMap.Poi
 {
@@ -18,9 +19,9 @@ namespace MiniMap.Poi
 
         protected override void Update()
         {
-            if (Character == null || CharacterType != CharacterType.Main && PoiCommon.IsDead(Character))
+            // 移除死亡检查，只保留方向更新逻辑
+            if (Character == null)
             {
-                Destroy(this.gameObject);
                 return;
             }
             base.Update();

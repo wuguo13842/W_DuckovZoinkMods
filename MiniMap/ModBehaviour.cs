@@ -39,47 +39,50 @@ namespace MiniMap
             MiniMapDisplayEntryPatcher.Instance,
         };
 
-        public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
-        {
-            MethodInfo originMethod = targetType.GetMethod(methodName, bindFlags);
-            if (originMethod == null)
-            {
-                Debug.LogWarning($"[{MOD_NAME}] Original method not found: {targetType.Name}.{methodName}");
-                return false;
-            }
+		[Obsolete("请使用预定义的补丁列表，这个方法仅用于兼容性")]
+		public bool PatchSingleExtender(Type targetType, Type extenderType, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
+		{
+			Log.Warning($"使用动态补丁方法，建议迁移到预定义补丁列表");
+			
+			try
+			{
+				// 简化版本，只做基本检查
+				var originMethod = HarmonyLib.AccessTools.Method(targetType, methodName);
+				if (originMethod == null) return false;
+				
+				// 让Harmony处理大部分工作
+				Harmony.Patch(originMethod, 
+					prefix: new HarmonyMethod(extenderType, "Prefix"),
+					postfix: new HarmonyMethod(extenderType, "Postfix")
+				);
+				
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
+		}
 
-            try
-            {
-                MethodInfo prefix = extenderType.GetMethod("Prefix", BindingFlags.Static | BindingFlags.Public);
-                MethodInfo postfix = extenderType.GetMethod("Postfix", BindingFlags.Static | BindingFlags.Public);
-                MethodInfo transpiler = extenderType.GetMethod("Transpiler", BindingFlags.Static | BindingFlags.Public);
-                MethodInfo finalizer = extenderType.GetMethod("Finalizer", BindingFlags.Static | BindingFlags.Public);
-                Harmony.Unpatch(originMethod, HarmonyPatchType.All, Harmony.Id);
-                Harmony.Patch(
-                    originMethod,
-                    prefix != null ? new HarmonyMethod(prefix) : null,
-                    postfix != null ? new HarmonyMethod(postfix) : null,
-                    transpiler != null ? new HarmonyMethod(transpiler) : null,
-                    finalizer != null ? new HarmonyMethod(finalizer) : null
-                );
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[{MOD_NAME}] Failed to patch {originMethod}: {ex.Message}");
-                return false;
-            }
-        }
-
+        // 这个方法可以被简化或删除，因为很少使用
         public bool UnpatchSingleExtender(string assembliyName, string targetTypeName, string methodName, BindingFlags bindFlags = BindingFlags.Instance | BindingFlags.Public)
         {
-            Type? targetType = AssemblyOperations.FindTypeInAssemblies(assembliyName, targetTypeName);
+            // 使用Type.GetType替代AssemblyOperations.FindTypeInAssemblies
+            Type targetType = Type.GetType($"{targetTypeName}, {assembliyName}");
             if (targetType == null)
             {
                 Debug.LogWarning($"[{MOD_NAME}] Target Type \"{targetTypeName}\" Not Found!");
                 return false;
             }
-            MethodInfo originMethod = targetType.GetMethod(methodName, bindFlags);
+            
+            // 使用Harmony的AccessTools替代反射
+            var originMethod = HarmonyLib.AccessTools.Method(targetType, methodName);
+            if (originMethod == null)
+            {
+                Debug.LogWarning($"[{MOD_NAME}] Method \"{methodName}\" not found in {targetTypeName}");
+                return false;
+            }
+            
             Harmony.Unpatch(originMethod, HarmonyPatchType.All, MOD_ID);
             return true;
         }
@@ -129,7 +132,15 @@ namespace MiniMap
             try
             {
                 ApplyHarmonyPatchers();
+                DeathEventHandler.Initialize(); // 初始化死亡事件处理器
                 LevelManager.OnEvacuated += OnEvacuated;
+                
+                //SceneLoader.onFinishedLoadingScene += PoiManager.OnFinishedLoadingScene;
+                //LevelManager.OnAfterLevelInitialized += PoiManager.OnLenvelIntialized;
+                //SceneLoader.onStartedLoadingScene += onStartedLoadingScene;  // 场景加载流程开始时，在显示加载界面之前
+                //SceneLoader.onFinishedLoadingScene += onFinishedLoadingScene;  // 场景已经加载完成（资源加载完毕），但还没有被设置为活动场景之前
+                //SceneLoader.onBeforeSetSceneActive += OnBeforeSetSceneActive;  // 新场景已经被设置为活动场景，初始化完成后
+                //SceneLoader.onAfterSceneInitialize += OnAfterSceneInitialize;  // 整个场景加载流程完全结束，包括所有过渡动画完成后
 
             }
             catch (Exception e)
@@ -148,8 +159,12 @@ namespace MiniMap
             try
             {
                 CancelHarmonyPatchers();
+                DeathEventHandler.Cleanup(); // 清理死亡事件处理器
                 LevelManager.OnEvacuated -= OnEvacuated;
-
+                
+                //SceneLoader.onFinishedLoadingScene -= PoiManager.OnFinishedLoadingScene;
+                //LevelManager.OnAfterLevelInitialized -= PoiManager.OnLenvelIntialized;
+                //SceneLoader.onStartedLoadingScene -= onFinishedLoadingScene;
                 MinimapManager.Destroy();
                 Log.Info($"disable mod {MOD_NAME}");
             }
@@ -169,8 +184,8 @@ namespace MiniMap
         {
             Log.Info("$SettingManager初始化成功，开始创建UI");
             ModSettingManager.CreateUI(ModInfo);
-			MinimapManager.Initialize();
-		}
+            MinimapManager.Initialize();
+        }
 
         void Update()
         {

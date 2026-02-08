@@ -1,8 +1,13 @@
 {
     "friendly": {
         "defaultIcon": "MiniMap_FriendlyIcon.png",
-        "scale": 0.6,
-        "PetPreset_NormalPet": "MiniMap_PetIcon.png",
+        "iconScale": 0.25,
+        "nameScale": 0.5,
+        "PetPreset_NormalPet": {
+            "icon": "MiniMap_PetIcon.png",
+            "iconScale": 0.45,
+            "nameScale": 0.4
+        },
         "EnemyPreset_QuestGiver_Fo": "",
         "EnemyPreset_QuestGiver_XiaoMing": "",
         "SpawnPreset_Animal_Jinitaimei": "",
@@ -11,11 +16,13 @@
     },
     "enemy": {
         "defaultIcon": "MiniMap_EnemyIcon.png",
-        "scale": 0.6
+        "iconScale": 0.25,
+        "nameScale": 0.5
     },
     "neutral": {
         "defaultIcon": "MiniMap_NeutralIcon.png",
-        "scale": 0.6,
+        "iconScale": 0.25,
+        "nameScale": 0.5,
         "EnemyPreset_Spider_RotateShoot": "",
         "EnemyPreset_Melee_UltraMan": "",
         "EnemyPreset_Merchant_Myst": "",
@@ -24,7 +31,8 @@
     },
     "boss": {
         "defaultIcon": "MiniMap_BossIcon.png",
-        "scale": 0.9,
+        "iconScale": 0.5,
+        "nameScale": 0.75,
         "EnemyPreset_BossMelee_SchoolBully": "",
         "EnemyPreset_Boss_3Shot": "",
         "EnemyPreset_Boss_Arcade": "",
@@ -51,6 +59,9 @@
         "EnemyPreset_Boss_Snow_BigIce": "",
         "EnemyPreset_Boss_Speedy_Ice": ""
     },
+    "CenterIconSize": 0.55,
+    "SceneTextIcons": 0.4,
     "defaultIcon": "MiniMap_EnemyIcon.png",
-    "defaultScale": 0.6
+    "defaultIconScale": 0.25,
+    "defaultNameScale": 0.5
 }

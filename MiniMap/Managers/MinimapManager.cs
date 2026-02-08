@@ -21,6 +21,8 @@ using ZoinkModdingLibrary.Extentions;
 using ZoinkModdingLibrary.GameUI;
 using ZoinkModdingLibrary.ModSettings;
 using ZoinkModdingLibrary.Utils;
+using System.Linq;
+using Duckov.Scenes;
 
 namespace MiniMap.Managers
 {
@@ -36,7 +38,7 @@ namespace MiniMap.Managers
         private static float northFontSize = 18f;
 
         public static float MapBorderEulerZRotation = 0f;
-        public static Vector2 displayZoomRange = new Vector2(0.1f, 30f);
+        public static Vector2 displayZoomRange = new Vector2(0.25f, 4f);
         public static Color backgroundColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
         public static GameObject? miniMapScaleContainer;
 
@@ -46,6 +48,10 @@ namespace MiniMap.Managers
 
         private static MiniMapDisplay? minimapDisplay;
         private static MiniMapDisplay? originalDisplay;
+		
+		private static float lastNonBaseZoom = 1f; // 保存上次非Base场景的缩放值
+		private static bool isInBaseScene = false; // 标记是否在Base场景
+		public static float CurrentMapWorldSize { get; private set; } = 1000f; // 默认1000米 添加字段记录当前地图尺寸
 
         public static MiniMapDisplay? MinimapDisplay => minimapDisplay;
         public static MiniMapDisplay? OriginalDisplay
@@ -79,7 +85,8 @@ namespace MiniMap.Managers
             ModSettingManager.ConfigChanged += OnConfigChanged;
             ModSettingManager.ButtonClicked += OnButtonClicked;
             SceneManager.sceneLoaded += OnSceneLoaded;
-            SceneLoader.onStartedLoadingScene += OnStartedLoadingScene;
+            SceneLoader.onFinishedLoadingScene += onFinishedLoadingScene;
+			SceneLoader.onAfterSceneInitialize += OnAfterSceneInitialize;  // 整个场景加载流程完全结束，包括所有过渡动画完成后  不要动测试必须是OnAfterSceneInitialize， MultiSceneCore.ActiveSubSceneID才生效
 
             IsInitialized = true;
         }
@@ -93,14 +100,128 @@ namespace MiniMap.Managers
             ModSettingManager.ConfigChanged -= OnConfigChanged;
             ModSettingManager.ButtonClicked -= OnButtonClicked;
             SceneManager.sceneLoaded -= OnSceneLoaded;
-            SceneLoader.onStartedLoadingScene -= OnStartedLoadingScene;
+            SceneLoader.onFinishedLoadingScene -= onFinishedLoadingScene;
+			SceneLoader.onAfterSceneInitialize -= OnAfterSceneInitialize;
 
             IsInitialized = false;
         }
-
-        private static void OnStartedLoadingScene(SceneLoadingContext obj)
+		
+private static void OnAfterSceneInitialize(SceneLoadingContext context)
+{
+    try
+    {
+        Log.Info($"调整缩放范围 - 当前场景: {context.sceneName}");
+        
+        if (MiniMapSettings.Instance == null) return;
+        
+        string mapSceneID = MultiSceneCore.ActiveSubSceneID;
+        if (string.IsNullOrEmpty(mapSceneID)) return;
+        
+        var map = MiniMapSettings.Instance.maps.FirstOrDefault(e => e.sceneID == mapSceneID);
+        if (map == null || map.imageWorldSize <= 0) return;
+        
+        // 判断当前场景
+        bool isBaseScene = context.sceneName == "Base";
+        
+        if (isBaseScene)
         {
-            ApplyConfigs();
+            // Base场景处理
+            HandleBaseScene();
+        }
+        else
+        {
+            // 非Base场景处理
+            HandleNonBaseScene(map, mapSceneID);
+        }
+    }
+    catch (Exception e)
+    {
+        Log.Error($"错误: {e.Message}");
+    }
+}
+
+private static void HandleBaseScene()
+{
+    // Base场景：固定4倍缩放
+    displayZoomRange = new Vector2(4f, 4f);
+    
+    // 保存当前缩放到Mod设置（使用特殊键）
+    float currentZoom = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
+    
+    // 检查是否已经保存过（默认值设为-1表示没保存过）
+    float savedValue = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "savedZoomBeforeBase", -1f);
+    if (savedValue < 0)
+    {
+        ModSettingManager.SaveValue(ModBehaviour.ModInfo, "savedZoomBeforeBase", currentZoom);
+        Log.Info($"进入Base场景，保存缩放到设置: {currentZoom:F2}x");
+    }
+    
+    // 强制设置为4倍
+    ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", 4f);
+    UpdateDisplayZoom();
+    
+    Log.Info($"Base场景固定缩放: 4.00x");
+}
+
+private static void HandleNonBaseScene(MiniMapSettings.MapEntry map, string mapSceneID)
+{
+	CurrentMapWorldSize = map.imageWorldSize; // 保存当前地图尺寸
+	
+    // 非Base场景：正常计算缩放
+    float minZoom = Mathf.Clamp(0.25f * (1000f / map.imageWorldSize), 0.25f, 4f);
+    displayZoomRange = new Vector2(minZoom, 4f);
+    
+    // 检查是否有保存的缩放值（默认值-1表示没有保存过）
+    float savedZoom = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "savedZoomBeforeBase", -1f);
+    float targetZoom;
+    
+    if (savedZoom >= 0)
+    {
+        // 使用保存的缩放值，并清除保存
+        targetZoom = savedZoom;
+        ModSettingManager.SaveValue(ModBehaviour.ModInfo, "savedZoomBeforeBase", -1f);
+        Log.Info($"使用保存的缩放: {targetZoom:F2}x");
+    }
+    else
+    {
+        // 使用当前的缩放值
+        targetZoom = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
+    }
+    
+    // 调整到范围内
+    float clampedZoom = Mathf.Clamp(targetZoom, minZoom, 4f);
+    
+    if (Mathf.Abs(targetZoom - clampedZoom) > 0.01f)
+    {
+        Log.Info($"缩放调整: {targetZoom:F2}x → {clampedZoom:F2}x");
+    }
+    
+    ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", clampedZoom);
+    UpdateDisplayZoom();
+    
+    Log.Info($"非Base场景: {map.sceneID}, 尺寸: {map.imageWorldSize:F0}米, 缩放: {clampedZoom:F2}x");
+}
+
+        private static void onFinishedLoadingScene(SceneLoadingContext context)
+        {    
+			// ============ 直接在这里处理，不通过 ApplyConfigs ============
+			try
+			{
+				// 只更新位置、缩放、按键绑定
+				OnMinimapPositionChanged();
+				OnMinimapContainerScaleChanged();
+				UpdateInputBindings();
+                bool enabled = ModSettingManager.GetValue<bool>(ModBehaviour.ModInfo, "enableMiniMap");
+                isEnabled = enabled;
+                isToggled = enabled;
+				
+				// 不调用 OnEnabledChanged()
+			}
+			catch { }
+			
+            if (string.IsNullOrEmpty(context.sceneName)) return;
+            // 预加载场景中心点（触发缓存填充）
+            Duckov.MiniMaps.UI.CharacterPoiEntry.GetSceneCenterFromSettings(context.sceneName);
         }
 
         private static void OnConfigChanged(ModInfo modInfo, string key, object? value)
@@ -230,7 +351,7 @@ namespace MiniMap.Managers
             if (!HasMap())
                 return;
             float displayZoomScale = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "displayZoomScale");
-            float miniMapZoomStep = ModSettingManager.GetValue<float>(ModBehaviour.ModInfo, "miniMapZoomStep");
+            float miniMapZoomStep = 0.1f;
             displayZoomScale += symbol * miniMapZoomStep;
             displayZoomScale = Mathf.Clamp(displayZoomScale, displayZoomRange.x, displayZoomRange.y);
             ModSettingManager.SaveValue(ModBehaviour.ModInfo, "displayZoomScale", displayZoomScale);
@@ -689,6 +810,9 @@ namespace MiniMap.Managers
         // 新增的 Input System 相关字段
         private static Key _zoomInKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapZoomInKey");
         private static Key _zoomOutKey = ModSettingManager.GetValue<Key>(ModBehaviour.ModInfo, "MiniMapZoomOutKey");
+		// private static Key _zoomInKey = Key.Equals;
+        // private static Key _zoomOutKey = Key.Minus;
+		
         private static InputAction? _toggleAction;       // 切换小地图显示/隐藏的按键动作
         private static InputAction? _zoomInAction;       // 放大按键动作
         private static InputAction? _zoomOutAction;      // 缩小按键动作
@@ -772,6 +896,7 @@ namespace MiniMap.Managers
         /// </summary>
         private static void OnZoomInStarted(InputAction.CallbackContext context)
         {
+			Log.Info($"放大按键：默认 = 键");
             CancelZoomIn();  // 取消可能还在运行的放大任务
             _zoomInCTS = new CancellationTokenSource();  // 创建新的取消令牌源
             ZoomThrottleLoop(1, _zoomInCTS.Token, _zoomOutKey).Forget();  // 启动缩放控制任务（1 = 放大方向）
@@ -792,6 +917,7 @@ namespace MiniMap.Managers
         /// </summary>
         private static void OnZoomOutStarted(InputAction.CallbackContext context)
         {
+			Log.Info($"缩小按键：默认 - 键");
             CancelZoomOut();  // 取消可能还在运行的缩小任务
             _zoomOutCTS = new CancellationTokenSource();  // 创建新的取消令牌源
             ZoomThrottleLoop(-1, _zoomOutCTS.Token, _zoomInKey).Forget();  // 启动缩放控制任务（-1 = 缩小方向）
@@ -860,9 +986,10 @@ namespace MiniMap.Managers
                         await UniTask.Delay(100, DelayType.Realtime, PlayerLoopTiming.Update, token);
                         continue;
                     }
+					// Log.Info($"放大缩小循环");
                     await UniTask.SwitchToMainThread(); // 回到主线程
                     DisplayZoom(direction);  // 执行节流缩放
-                    await UniTask.Delay(75, DelayType.Realtime, PlayerLoopTiming.Update, token);
+                    await UniTask.Delay(20, DelayType.Realtime, PlayerLoopTiming.Update, token);
                 }
             }
             catch (OperationCanceledException)

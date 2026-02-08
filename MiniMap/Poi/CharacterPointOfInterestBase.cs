@@ -1,4 +1,4 @@
-﻿using Duckov.MiniMaps;
+﻿﻿using Duckov.MiniMaps;
 using Duckov.Modding;
 using Duckov.Scenes;
 using MiniMap.Managers;
@@ -32,6 +32,14 @@ namespace MiniMap.Poi
         private float scaleFactor = 1f;
         private bool hideIcon = false;
         private string? overrideSceneID;
+		
+		// 添加名字缩放属性
+		private float nameScaleFactor = 1.0f;
+		public virtual float NameScaleFactor 
+		{ 
+			get => nameScaleFactor; 
+			set => nameScaleFactor = value; 
+		}
 
         public virtual bool Initialized => initialized;
         public virtual CharacterMainControl? Character => character;
@@ -114,8 +122,7 @@ namespace MiniMap.Poi
             this.character = character;
             this.characterType = characterType;
             this.icon = GameObject.Instantiate(poi.Icon);
-            FieldInfo? field = typeof(SimplePointOfInterest).GetField("displayName", BindingFlags.NonPublic | BindingFlags.Instance);
-            this.cachedName = field.GetValue(poi) as string;
+            this.cachedName = poi.DisplayName;
             this.followActiveScene = followActiveScene;
             this.overrideSceneID = overrideSceneID;
             this.isArea = poi.IsArea;

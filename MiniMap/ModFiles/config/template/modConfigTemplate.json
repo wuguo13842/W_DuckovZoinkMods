@@ -28,14 +28,6 @@
                 "max": 3.0,
                 "decimalPlaces": 2
             },
-            "iconScaleType": {
-                "type": "dropdownList",
-                "descCN": "图标缩放方式",
-                "descEN": "Icon Scale Type",
-                "optionsCN": [ "无", "跟随小地图窗口", "跟随小地图缩放" ],
-                "optionsEN": [ "None", "Follow Mini Map Window", "Follow Mini Map Zoom" ],
-                "default": 0
-            },
             "miniMapPositionX": {
                 "type": "slider",
                 "descCN": "小地图位置X",
@@ -53,15 +45,6 @@
                 "min": 0,
                 "max": 1.0,
                 "decimalPlaces": 3
-            },
-            "miniMapZoomStep": {
-                "type": "slider",
-                "descCN": "小地图缩放步长",
-                "descEN": "Mini Map Scale Step",
-                "default": 0.5,
-                "min": 0.1,
-                "max": 2.0,
-                "decimalPlaces": 2
             },
             "hideDisplayName": {
                 "type": "toggle",
@@ -96,24 +79,6 @@
         "descCN": "单位显示",
         "descEN": "Position Display",
         "configs": {
-            "miniMapCenterIconSize": {
-                "type": "slider",
-                "descCN": "小地图中心图标大小",
-                "descEN": "Mini Map Center Icon Size",
-                "default": 1.0,
-                "min": 0.2,
-                "max": 1.0,
-                "decimalPlaces": 1
-            },
-            "miniMapGlobalSize": {
-                "type": "slider",
-                "descCN": "小地图全局调节",
-                "descEN": "Global Mini Map Scale",
-                "default": 1.0,
-                "min": 0.2,
-                "max": 1.0,
-                "decimalPlaces": 1
-            },
             "showOnlyActivated": {
                 "type": "toggle",
                 "descCN": "仅显示附近敌人（建议打开）",
@@ -138,29 +103,11 @@
                 "descEN": "Show Your Pet",
                 "default": true
             },
-            "petIconSize": {
-                "type": "slider",
-                "descCN": "宠物图标大小",
-                "descEN": "Pet Icon Size",
-                "default": 0.8,
-                "min": 0.2,
-                "max": 1.0,
-                "decimalPlaces": 1
-            },
             "showBossPoi": {
                 "type": "toggle",
                 "descCN": "显示Boss图标",
                 "descEN": "Show Boss",
                 "default": true
-            },
-            "bossIconSize": {
-                "type": "slider",
-                "descCN": "Boss图标大小",
-                "descEN": "Boss Icon Size",
-                "default": 1.2,
-                "min": 0.2,
-                "max": 1.2,
-                "decimalPlaces": 1
             },
             "showEnemyPoi": {
                 "type": "toggle",
@@ -173,18 +120,7 @@
                 "descCN": "显示中立单位图标",
                 "descEN": "Show Neutral",
                 "default": true
-            },
-            // ============ 新增图标大小设置 ============
-            "enemyIconSize": {
-                "type": "slider",
-                "descCN": "普通敌人/NPC/中立图标大小",
-                "descEN": "Enemy/NPC/Neutral Icon Size",
-                "default": 1.0,
-                "min": 0.2,
-                "max": 1.0,
-                "decimalPlaces": 1
             }
-            // ============ 新增结束 ============
         }
     },
     "HotKeys": {
